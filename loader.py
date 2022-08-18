@@ -1,7 +1,10 @@
 from telebot import TeleBot
-from telebot.storage import StateMemoryStorage
-from config_data import config
+from config_data.config import BOT_TOKEN
+from telebot.types import BotCommand
+from interface.messages import DEFAULT_COMMANDS
 
-storage = StateMemoryStorage()
-bot = TeleBot(token=config.BOT_TOKEN, state_storage=storage)
+lang = 'Ru'
+
+bot = TeleBot(token=BOT_TOKEN)
+bot.set_my_commands([BotCommand(*i) for i in DEFAULT_COMMANDS[lang].items()])
 
