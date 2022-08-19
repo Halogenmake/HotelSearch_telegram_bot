@@ -52,17 +52,16 @@ class DataBase:
                 "SELECT * FROM 'users' WHERE user_id = ?", (user_id,)
             )
             exist = cursor.fetchone()
-            print(exist)
             if not exist:
                 cursor.execute(
                     "INSERT INTO 'users' ("
                     "user_id, lang) "
                     "VALUES (?, ?)", (user_id, 'Ru')
                 )
-                user.user_from_base((None, user_id, 'Ru'))
+                #user.user_from_base((None, user_id, 'Ru'))
                 return False
             else:
-                user.user_from_base(exist)
+                #user.user_from_base(exist)
                 return True
 
     @classmethod
@@ -74,7 +73,16 @@ class DataBase:
                 "WHERE user_id = ?", (lang, user_id,)
             )
 
-        user.set_lang(lang)
+    @classmethod
+    def user_get_lang(cls, user_id: int) -> str:
+        with sqlite3.connect('database.db') as data:
+            cursor = data.cursor()
+            cursor.execute(
+                "SELECT lang FROM 'users' "
+                "WHERE user_id = ?;", (user_id,)
+            )
+            return cursor.fetchone()[0]
+        #user.set_lang(lang)
 
 
-user = User_methods()
+#user = User_methods()
