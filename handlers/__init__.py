@@ -1,4 +1,5 @@
 from . import start
-from . import help
+from . import select_lang
 
-__all__ =['start', 'help']
+
+__all__ =['start', 'select_lang']

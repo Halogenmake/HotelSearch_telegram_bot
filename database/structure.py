@@ -15,14 +15,15 @@ class User_methods:
     def get_lang(self) -> str:
         return self.user.user_lang
 
+    def get_id(self) -> int:
+        return self.user.user_id
+
+    def set_lang(self, lang: str) -> None:
+        self.user.user_lang = lang
+
     def user_from_base(self, keys: tuple) -> None:
         _, self.user.user_id, self.user.user_lang = keys
 
-    def user_to_base(self) -> tuple:
-        return (
-            self.user.user_id,
-            self.user.user_lang
-        )
 
 class DataBase:
 
@@ -44,23 +45,36 @@ class DataBase:
                 )
 
     @classmethod
-    def user_set(cls, user_id) -> bool:
+    def user_set(cls, user_id: int) -> bool:
         with sqlite3.connect('database.db') as data:
             cursor = data.cursor()
             cursor.execute(
-                "SELECT * FROM 'users' WHERE user_id = ?", (user_id, )
+                "SELECT * FROM 'users' WHERE user_id = ?", (user_id,)
             )
             exist = cursor.fetchone()
             print(exist)
             if not exist:
                 cursor.execute(
                     "INSERT INTO 'users' ("
-                "user_id, lang) "
-                "VALUES (?, ?)", (user_id, 'Ru')
+                    "user_id, lang) "
+                    "VALUES (?, ?)", (user_id, 'Ru')
                 )
+                user.user_from_base((None, user_id, 'Ru'))
                 return False
             else:
                 user.user_from_base(exist)
                 return True
+
+    @classmethod
+    def user_set_lang(cls, lang: str, user_id: int) -> None:
+        with sqlite3.connect('database.db') as data:
+            cursor = data.cursor()
+            cursor.execute(
+                "UPDATE users SET lang = ?"
+                "WHERE user_id = ?", (lang, user_id,)
+            )
+
+        user.set_lang(lang)
+
 
 user = User_methods()

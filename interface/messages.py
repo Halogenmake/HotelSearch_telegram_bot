@@ -9,5 +9,15 @@ DEFAULT_COMMANDS = {
     }
 }
 
+DEFAULT_COMMANDS_MENU = {
+    'start': "Запустить бота / Bot start",
+    'help': "Вывести справку / Get the help"
+}
+
 SELECT_LANG = 'Выберите язык интерфейа\n' \
               'Select interface laguage'
+
+CHOICE_LANG = {
+    'Ru': 'Выбран Русский язык',
+    'En': 'English is selected'
+}
