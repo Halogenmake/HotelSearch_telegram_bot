@@ -9,4 +9,12 @@ else:
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 RAPID_API_KEY = os.getenv('RAPID_API_KEY')
 
+HEADERS = {
+    'X-RapidAPI-Host': 'hotels4.p.rapidapi.com',
+    'X-RapidAPI-Key': RAPID_API_KEY
+}
+
+URL_SEARCH = 'https://hotels4.p.rapidapi.com/locations/v2/search'
+
+
 

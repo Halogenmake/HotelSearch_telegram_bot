@@ -1,6 +1,27 @@
 from dataclasses import dataclass
 import sqlite3
 
+from telebot.handler_backends import StatesGroup, State
+
+
+@dataclass
+class Data_request_state(StatesGroup):
+    lang: str = State()
+    command: str = State()
+    city: str = State()
+    city_id: int = State()
+    curr: str = State()
+    hotel_count: int = State()
+    check_in: str = State()
+    check_out: str = State()
+    photo: bool = State()
+    count_photo: int = State()
+
+
+
+
+
+
 
 @dataclass
 class User:
@@ -58,10 +79,8 @@ class DataBase:
                     "user_id, lang) "
                     "VALUES (?, ?)", (user_id, 'Ru')
                 )
-                #user.user_from_base((None, user_id, 'Ru'))
                 return False
             else:
-                #user.user_from_base(exist)
                 return True
 
     @classmethod
@@ -82,7 +101,3 @@ class DataBase:
                 "WHERE user_id = ?;", (user_id,)
             )
             return cursor.fetchone()[0]
-        #user.set_lang(lang)
-
-
-#user = User_methods()
