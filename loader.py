@@ -1,3 +1,10 @@
+
+"""
+Пакет содержит основную переменную бота, а также его настройки, такие как
+ - работа со стейтами;
+ - дефолтные команды (дефолтная команда одна - /start)
+"""
+
 from telebot import TeleBot, custom_filters
 from telebot.types import BotCommand
 from telebot.storage import StateMemoryStorage
