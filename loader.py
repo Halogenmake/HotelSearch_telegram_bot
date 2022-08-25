@@ -4,9 +4,7 @@ from telebot.storage import StateMemoryStorage
 
 from config_data.config import BOT_TOKEN
 from interface.messages import DEFAULT_COMMANDS_MENU
-from database.structure import DataBase
 
-DataBase.user_table_create()
 
 state_storage = StateMemoryStorage()
 bot = TeleBot(token=BOT_TOKEN, state_storage=state_storage)

@@ -1,49 +1,44 @@
 from dataclasses import dataclass
 import sqlite3
+from typing import Any, Union
 
 from telebot.handler_backends import StatesGroup, State
+from loader import bot
 
 
 @dataclass
 class Data_request_state(StatesGroup):
-    lang: str = State()
-    command: str = State()
     city: str = State()
-    city_id: int = State()
-    curr: str = State()
-    hotel_count: int = State()
     check_in: str = State()
     check_out: str = State()
-    photo: bool = State()
-    count_photo: int = State()
 
 
+class Users_State:
 
+    @classmethod
+    def state_record(cls, user_id: int, key: Union[tuple, Any], value: Union[tuple, Any]) -> None:
+        with bot.retrieve_data(user_id=user_id) as data:
+            if not isinstance(key, tuple) or not isinstance(value, tuple):
+                data[key] = value
+            else:
+                for i_key, i_value in zip(key, value):
+                    data[i_key] = i_value
 
+    @classmethod
+    def state_get(cls, user_id: int, key: Union[tuple, Any]) -> Any:
+        with bot.retrieve_data(user_id=user_id) as data:
+            if not isinstance(key, tuple):
+                return data[key]
+            else:
+                return tuple(data[i_key] for i_key in key)
 
+    @classmethod
+    def state_print(cls, user_id: int):
+        with bot.retrieve_data(user_id=user_id) as data:
+            print()
+            for i_data in data.items():
+                print(i_data)
 
-
-@dataclass
-class User:
-    user_id: int = 0
-    user_lang: str = 'Ru'
-
-
-class User_methods:
-    def __init__(self) -> None:
-        self.user: User = User()
-
-    def get_lang(self) -> str:
-        return self.user.user_lang
-
-    def get_id(self) -> int:
-        return self.user.user_id
-
-    def set_lang(self, lang: str) -> None:
-        self.user.user_lang = lang
-
-    def user_from_base(self, keys: tuple) -> None:
-        _, self.user.user_id, self.user.user_lang = keys
 
 
 class DataBase:

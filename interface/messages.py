@@ -134,3 +134,35 @@ SELECT_COUNT_PHOTO = {
     'Ru': 'Выберите количество фотографий',
     'En': 'Select the number of photo'
 }
+
+CHOICE_COUNT_PHOTO = {
+    'Ru': 'Будет показано {} фотографии(й)',
+    'En': 'It will be shown {} photo'
+}
+
+PLEASE_WHAIT = {
+    'Ru': 'Ищем подходящие варианты, пожалуйста, подождите...',
+    'En': 'We are looking for suitable options, please wait...'
+}
+
+ERROR_HOTEL = {
+    'Ru': 'В запросе произошла ошибка, попробуйте снова.',
+    'En': 'An error occurred in the request, please try again.'
+}
+
+HOTEL_TEMPLATE = {
+    'Ru':
+        '<b>Название отеля:</b> {}\n'
+        '<b>Адрес отеля:</b> {}\n'
+        '<b>Расстояние от центра:</b> {}\n'
+        '<b>Цена за день:</b> {}\n'
+        '<b>Рейтинг:</b> {}\n'
+        '<b>Ссылка на отель:</b> {}\n',
+    'En':
+        '<b>Name of the hotel:</b> {}\n'
+        '<b>Hotel address:</b> {}\n'
+        '<b>Distance from the center:</b> {}\n'
+        '<b>Price per day:</b> {}\n'
+        '<b>Rating:</b> {}\n'
+        '<b>Link:</b> {}\n'
+}

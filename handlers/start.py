@@ -26,7 +26,6 @@ def lang_func(lang: str, user_id: int) -> None:
 
 @bot.message_handler(commands=['start'])
 def bot_start(message: Message):
-
     if not DataBase.user_set(message.from_user.id):
         bot.send_message(message.from_user.id, SELECT_LANG, reply_markup=select_lang_key)
     else:
