@@ -16,11 +16,16 @@ from interface.messages import LOWPRICE_STAE, HIGHPRICE_STATE, SELECT_CITY, \
     INCORRECT_CITY, CORRECT_CITY, ERROR_CITY, CHOICE_CITY, SELECT_CURRENCY, CHOICE_CURRENCY, \
     SELECT_COUNT_HOTEL, CHOICE_COUNT_HOTEL, SELECT_CHECK_IN, INCORRECT_CHECK_IN_FORMAT, INCORRECT_CHECK_IN_DATA, \
     SELECT_CHECK_OUT, INCORRECT_CHECK_OUT_FORMAT, INCORRECT_CHECK_OUT_DATA, SELECT_LOAD_PHOTO, SELECT_COUNT_PHOTO, \
-    CHOICE_COUNT_PHOTO, PLEASE_WHAIT, ERROR_HOTEL, DEFAULT_COMMANDS, HOTEL_TEMPLATE, REQUEST_CARD
+    CHOICE_COUNT_PHOTO, PLEASE_WHAIT, ERROR_HOTEL, DEFAULT_COMMANDS, HOTEL_TEMPLATE, REQUEST_CARD_TEMPLATE
 
 from keyboards.key_text import LOWPRICE_CALL, CURRENCY_KEY_CALL, COUNT_HOTEL_CALL, COUNT_PHOTO_CALL, BESTDEAL_CALL, \
     HIGHPRICE_CALL
 from keyboards.keyboards import city_corr_keys, currency_keys, hotels_count_keys, select_photo_keys, main_menu_keys
+
+
+def request_card_builder(template: str, param: tuple) -> str:
+    text = template.format(*param)
+    return text
 
 
 def lowprice_higthprice_start(user_id: int, command: str) -> None:
@@ -28,14 +33,16 @@ def lowprice_higthprice_start(user_id: int, command: str) -> None:
 
     bot.delete_state(user_id=user_id)
     bot.set_state(user_id=user_id, state=Data_request_state.city)
-    Users_State.state_record(user_id=user_id,
-                             key=('lang', 'command'), value=(lang, command))
 
     if command == LOWPRICE_CALL:
-        bot.send_message(chat_id=user_id, text=LOWPRICE_STAE[lang])
+        Users_State.state_record(user_id=user_id, key=('lang', 'command'),
+                                 value=(lang, command))
     else:
-        bot.send_message(chat_id=user_id, text=HIGHPRICE_STATE[lang])
+        Users_State.state_record(user_id=user_id, key=('lang', 'command'),
+                                 value=(lang, command))
+
     bot.send_message(chat_id=user_id, text=SELECT_CITY[lang])
+    print(Users_State.state_print(user_id))
 
 
 @bot.message_handler(state='*', commands=['start', 'help'])
@@ -53,6 +60,7 @@ def search_city_handler(message: Message) -> None:
     if response.status_code == 200:
         pattern_city_group = r'(?<="CITY_GROUP",).+?[\]]'
         find_cities = re.findall(pattern_city_group, response.text)
+        print(find_cities)
         if len(find_cities[0]) > 20:
             pattern_dest = r'(?<="destinationId":")\d+'
             destination = re.findall(pattern_dest, find_cities[0])
@@ -75,18 +83,18 @@ def search_city_handler(message: Message) -> None:
 @bot.callback_query_handler(func=lambda call: call.data.isdigit())
 def callback_city(call: CallbackQuery) -> None:
     lang = Users_State.state_get(user_id=call.from_user.id, key='lang')
+    city_select = ''
     for city in call.message.json['reply_markup']['inline_keyboard']:
         if city[0]['callback_data'] == call.data:
+            city_select = city[0]['text']
             Users_State.state_record(user_id=call.from_user.id, key=('city', 'city_id'),
-                                     value=(city[0]['text'], call.data))
+                                     value=(city_select, call.data))
             break
 
     bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id)
     bot.edit_message_text(
         message_id=call.message.message_id, chat_id=call.message.chat.id,
-        text=CHOICE_CITY[lang].format(
-            Users_State.state_get(user_id=call.from_user.id, key='city'))
-    )
+        text=CHOICE_CITY[lang].format(city_select))
 
     bot.send_message(
         chat_id=call.from_user.id, text=SELECT_CURRENCY[lang],
@@ -190,7 +198,7 @@ def callback_select_photo(call: CallbackQuery) -> None:
             reply_markup=hotels_count_keys(COUNT_PHOTO_CALL))
 
     else:
-        Users_State.state_record(user_id=call.from_user.id, key='photo', value=False)
+        Users_State.state_record(user_id=call.from_user.id, key=('photo', 'photo_count'), value=(False, 0))
         get_result(call=call)
 
 
@@ -214,15 +222,24 @@ def callback_photo_count(call: CallbackQuery) -> None:
 
 
 def get_result(call: CallbackQuery):
-    lang = Users_State.state_get(user_id=call.from_user.id, key='lang')
-    bot.send_message(
-        chat_id=call.from_user.id, text=PLEASE_WHAIT[lang]
-    )
+    lang, command, city, curr, check_in, check_out, hotel_count, photo_count = \
+        Users_State.state_get(user_id=call.from_user.id, key=('lang', 'command', 'city', 'curr', 'check_in', 'check_out', 'hotel_count', 'photo_count'))
+
+    if command == LOWPRICE_CALL:
+        cap = LOWPRICE_STAE[lang]
+    else:
+        cap = HIGHPRICE_STATE[lang]
+
+    bot.send_message(chat_id=call.from_user.id,
+                     text=request_card_builder(template=REQUEST_CARD_TEMPLATE[lang],
+                                               param=(cap, city, curr, check_in, check_out, hotel_count, photo_count)) + '\n' + PLEASE_WHAIT[lang],
+                     parse_mode='html')
+
     response = request_hotel_search(user_id=call.from_user.id)
 
     if response.status_code == 200:
         hotel_list = json.loads(response.text)['data']['body']['searchResults']['results']
-        if Users_State.state_get(user_id=call.from_user.id, key='command') != BESTDEAL_CALL:
+        if command != BESTDEAL_CALL:
             show_result(user_id=call.from_user.id, hotel_list=hotel_list)
         else:
             print('заглушка')
@@ -279,13 +296,14 @@ def get_media_file(hotel_id: int, user_id: int, text: str) -> list:
     response_photo = request_get_photo(hotel_id=hotel_id)
     if response_photo.status_code == 200:
         photo_list = json.loads(response_photo.text)['hotelImages']
+        print(photo_list)
         media_massive = []
         for link_photo in photo_list:
             if count_photo == 0:
                 return media_massive
             else:
                 photo = link_photo['baseUrl'].format(size='w')
-                response = requests.get(photo)
+                response = requests.get(photo, timeout=15)
                 if response.status_code == 200:
                     count_photo -= 1
                     media_massive.append(

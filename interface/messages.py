@@ -44,10 +44,23 @@ HIGHPRICE_STATE = {
     'En': 'Select the most expensive hotels'
 }
 
-REQUEST_CARD = {
-    'Ru': 'Город: {}',
-
-    'En': 'City: {}'
+REQUEST_CARD_TEMPLATE = {
+    'Ru':
+        '<b>{}</b>\n'
+        '<b>Город:</b> {}\n'
+        '<b>Валюта:</b> {}\n'
+        '<b>Дата заезда:</b> {}\n'
+        '<b>Дата отъезда:</b> {}\n'
+        '<b>Количество отелей:</b> {}\n'
+        '<b>Количество фотографий отеля:</b> {}\n',
+    'En':
+        '<b>{}</b>\n'
+        '<b>City:</b> {}\n'
+        '<b>Currency:</b> {}\n'
+        '<b>Check_in:</b> {}\n'
+        '<b>Check_out:</b> {}\n'
+        '<b>Number of hotels:</b> {}\n'
+        '<b>Number of photos of the hotel:</b> {}\n'
 }
 
 SELECT_CITY = {
@@ -166,3 +179,4 @@ HOTEL_TEMPLATE = {
         '<b>Rating:</b> {}\n'
         '<b>Link:</b> {}\n'
 }
+
