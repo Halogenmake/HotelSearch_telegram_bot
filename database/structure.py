@@ -27,7 +27,17 @@ class Data_request_state(StatesGroup):
 
 class Users_State:
     """
-    Датакласс для получения и записи данных в стейт
+    Датакласс для получения и записи данных в стейт.
+    Данные, записываемые в сетйт:
+    'lang': str - язык интерфейса
+    'command': str - введенная команда
+    'curr': str - валюта поиска
+    'hotel_count': int - количество отелей
+    'check_in': str - время заезда
+    'check_out': str - время отъезда
+    'photo': bool - наличие фото
+    'photo_count' - количество фото
+    'date' - дата и время выполнения запроса
     """
 
     @classmethod

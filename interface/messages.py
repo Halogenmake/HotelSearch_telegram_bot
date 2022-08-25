@@ -168,6 +168,16 @@ ERROR_HOTEL = {
     'En': 'An error occurred in the request, please try again.'
 }
 
+NOT_FOUND = {
+    'Ru': 'К сожалению ничего не найдено\nПопробуйте изменить параметры поиска',
+    'En': 'Unfortunately nothing was found\nTry changing the search parameters.'
+}
+
+SEARCH_COMPLETE = {
+    'Ru': 'Поиск завершен.',
+    'En': 'Search completed.'
+}
+
 HOTEL_TEMPLATE = {
     'Ru':
         '<b>Название отеля:</b> {}\n'

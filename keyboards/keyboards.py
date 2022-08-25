@@ -30,9 +30,9 @@ def currency_keys() -> InlineKeyboardMarkup:
     return keyboard
 
 
-def hotels_count_keys(keys: dict) -> InlineKeyboardMarkup:
+def hotels_count_keys(key: dict) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup(row_width=5)
-    keys = [InlineKeyboardButton(text=text, callback_data=call) for call, text in keys.items()]
+    keys = [InlineKeyboardButton(text=text, callback_data=call) for call, text in key.items()]
     keyboard.add(*keys)
     return keyboard
 
