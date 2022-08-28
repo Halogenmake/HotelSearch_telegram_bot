@@ -2,7 +2,6 @@
 Сценарий команд lowprice, hothprice.
 """
 
-
 import re
 import datetime
 import json
@@ -21,7 +20,8 @@ from interface.messages import LOWPRICE_STAE, HIGHPRICE_STATE, SELECT_CITY, \
     INCORRECT_CITY, CORRECT_CITY, ERROR_CITY, CHOICE_CITY, SELECT_CURRENCY, CHOICE_CURRENCY, \
     SELECT_COUNT_HOTEL, CHOICE_COUNT_HOTEL, SELECT_CHECK_IN, INCORRECT_CHECK_IN_FORMAT, INCORRECT_CHECK_IN_DATA, \
     SELECT_CHECK_OUT, INCORRECT_CHECK_OUT_FORMAT, INCORRECT_CHECK_OUT_DATA, SELECT_LOAD_PHOTO, SELECT_COUNT_PHOTO, \
-    CHOICE_COUNT_PHOTO, PLEASE_WHAIT, ERROR_HOTEL, DEFAULT_COMMANDS, HOTEL_TEMPLATE, NOT_FOUND, SEARCH_COMPLETE, REQUEST_CARD_TEMPLATE
+    CHOICE_COUNT_PHOTO, PLEASE_WHAIT, ERROR_HOTEL, DEFAULT_COMMANDS, HOTEL_TEMPLATE, NOT_FOUND, SEARCH_COMPLETE, \
+    REQUEST_CARD_TEMPLATE
 
 from keyboards.key_text import LOWPRICE_CALL, CURRENCY_KEY_CALL, COUNT_HOTEL_CALL, COUNT_PHOTO_CALL, BESTDEAL_CALL, \
     HIGHPRICE_CALL
@@ -38,6 +38,12 @@ def request_card_builder(template: str, param: tuple) -> str:
     """
     text = template.format(*param)
     return text
+
+
+def abort_command(user_id: int, lang: str) -> None:
+    bot.delete_state(user_id=user_id)
+    text = [f'/{command} - {desk}' for command, desk in DEFAULT_COMMANDS[lang].items()]
+    bot.send_message(chat_id=user_id, text='\n'.join(text), reply_markup=main_menu_keys(lang))
 
 
 def lowprice_higthprice_start(user_id: int, command: str) -> None:
@@ -68,14 +74,15 @@ def lowprice_higthprice_start(user_id: int, command: str) -> None:
     bot.send_message(chat_id=user_id, text=SELECT_CITY[lang])
 
 
-@bot.message_handler(state='*', commands=['start', 'help'])
+@bot.message_handler(state=[Data_request_state.city, Data_request_state.check_in, Data_request_state.check_out],
+                     commands=['start', 'help'])
 def cancel(message: Message) -> None:
     """
     Хэндлер-функция прерывания сценария по команде /start, /help
     :param message: Message
     """
-    bot.delete_state(user_id=message.from_user.id)
-    handlers.start.bot_start(message=message)
+    abort_command(user_id=message.from_user.id,
+                  lang=Users_State.state_get(user_id=message.from_user.id, key='lang'))
 
 
 @bot.message_handler(state=Data_request_state.city)
@@ -95,7 +102,6 @@ def search_city_handler(message: Message) -> None:
     if response.status_code == 200:
         pattern_city_group = r'(?<="CITY_GROUP",).+?[\]]'
         find_cities = re.findall(pattern_city_group, response.text)
-        print(find_cities)
         if len(find_cities[0]) > 20:
             pattern_dest = r'(?<="destinationId":")\d+'
             destination = re.findall(pattern_dest, find_cities[0])
@@ -285,7 +291,9 @@ def callback_select_photo(call: CallbackQuery) -> None:
     else:
         Users_State.state_record(user_id=call.from_user.id,
                                  key=('photo', 'photo_count', 'date'),
-                                 value=(False, 0, datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')))
+                                 value=(
+                                     False, 0,
+                                     datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')))
         get_result(call=call)
 
 
@@ -318,24 +326,28 @@ def callback_photo_count(call: CallbackQuery) -> None:
 
 def get_result(call: CallbackQuery):
     lang, command, city, curr, check_in, check_out, hotel_count, photo_count = \
-        Users_State.state_get(user_id=call.from_user.id, key=('lang', 'command', 'city', 'curr', 'check_in', 'check_out', 'hotel_count', 'photo_count'))
+        Users_State.state_get(user_id=call.from_user.id, key=(
+            'lang', 'command', 'city', 'curr', 'check_in', 'check_out', 'hotel_count', 'photo_count'))
 
     if command == LOWPRICE_CALL:
         cap = LOWPRICE_STAE[lang]
     else:
         cap = HIGHPRICE_STATE[lang]
 
+    request_card = request_card_builder(template=REQUEST_CARD_TEMPLATE[lang],
+                                        param=(cap, city, curr, check_in, check_out, hotel_count, photo_count))
+
     bot.send_message(chat_id=call.from_user.id,
-                     text=request_card_builder(template=REQUEST_CARD_TEMPLATE[lang],
-                                               param=(cap, city, curr, check_in, check_out, hotel_count, photo_count)) + '\n' + PLEASE_WHAIT[lang],
-                     parse_mode='html')
+                     text=request_card + '\n' + PLEASE_WHAIT[lang], parse_mode='html')
 
     response = request_hotel_search(user_id=call.from_user.id)
 
     if response.status_code == 200:
+        DataBase.request_set(user_id=call.from_user.id, content=request_card)
         hotel_list = json.loads(response.text)['data']['body']['searchResults']['results']
         if hotel_list is False:
             bot.send_message(chat_id=call.from_user.id, text=NOT_FOUND[lang])
+
         elif command != BESTDEAL_CALL:
             show_result(user_id=call.from_user.id, hotel_list=hotel_list)
         else:
@@ -343,50 +355,39 @@ def get_result(call: CallbackQuery):
 
     else:
         bot.send_message(chat_id=call.from_user.id, text=ERROR_HOTEL[lang])
-        bot.delete_state(user_id=call.from_user.id)
-        text = [f'/{command} - {desk}' for command, desk in DEFAULT_COMMANDS[lang].items()]
-        bot.send_message(chat_id=call.from_user.id, text='\n'.join(text), reply_markup=main_menu_keys(lang))
-
-
-def get_media(hotel_id: int, text: str) -> list:
-    count_photo = 3
-    response_photo = request_get_photo(hotel_id=hotel_id)
-    if response_photo.status_code == 200:
-        photo_list = json.loads(response_photo.text)['hotelImages']
-        media_massive = []
-        for link_photo in photo_list:
-            if count_photo == 0:
-                return media_massive
-            else:
-                photo = link_photo['baseUrl'].format(size='w')
-                response = requests.get(photo)
-                if response.status_code == 200:
-                    count_photo -= 1
-                    media_massive.append(
-                        InputMediaPhoto(photo, caption=text if count_photo == 1 else '', parse_mode='html')
-                    )
+        abort_command(user_id=call.from_user.id, lang=lang)
 
 
 def show_result(user_id: int, hotel_list: dict) -> None:
     lang, count_hotel, f_hotel = Users_State.state_get(user_id=user_id, key=('lang', 'hotel_count', 'photo'))
+
     for hotel in hotel_list:
         if count_hotel != 0:
+
             i_hotel = HOTEL_TEMPLATE[lang].format(
                 hotel['name'],
                 f'{hotel["address"]["streetAddress"]}, {hotel["address"]["locality"]}, {hotel["address"]["countryName"]}, {hotel["address"]["postalCode"]}',
                 hotel['landmarks'][0]['distance'],
                 hotel['ratePlan']['price']['current'],
                 hotel['starRating'],
-                URL_HOTEL.format(hotel['id'])
-            )
+                URL_HOTEL.format(hotel['id']))
+
+
             if not f_hotel:
                 bot.send_message(chat_id=user_id, text=i_hotel, parse_mode='html')
+                DataBase.hotels_set(user_id=user_id, content=i_hotel, photo='')
             else:
                 bot.send_media_group(chat_id=user_id, media=get_media_file(hotel['id'], user_id, i_hotel))
+
         else:
-            bot.send_message(chat_id=user_id, text=SEARCH_COMPLETE)
+            bot.send_message(chat_id=user_id, text=SEARCH_COMPLETE[lang])
+            abort_command(user_id=user_id, lang=lang)
             break
         count_hotel -= 1
+
+    else:
+        bot.send_message(chat_id=user_id, text=SEARCH_COMPLETE[lang])
+        abort_command(user_id=user_id, lang=lang)
 
 
 def get_media_file(hotel_id: int, user_id: int, text: str) -> list:
@@ -394,13 +395,15 @@ def get_media_file(hotel_id: int, user_id: int, text: str) -> list:
     response_photo = request_get_photo(hotel_id=hotel_id)
     if response_photo.status_code == 200:
         photo_list = json.loads(response_photo.text)['hotelImages']
-        print(photo_list)
         media_massive = []
+        photo_link_list = []
         for link_photo in photo_list:
             if count_photo == 0:
+                DataBase.hotels_set(user_id=user_id, content=text, photo='\n'.join(photo_link_list))
                 return media_massive
             else:
                 photo = link_photo['baseUrl'].format(size='w')
+                photo_link_list.append(photo)
                 response = requests.get(photo, timeout=15)
                 if response.status_code == 200:
                     count_photo -= 1

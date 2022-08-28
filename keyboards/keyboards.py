@@ -36,6 +36,7 @@ def hotels_count_keys(key: dict) -> InlineKeyboardMarkup:
     keyboard.add(*keys)
     return keyboard
 
+
 def select_photo_keys(lang: str) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup(row_width=5)
     keys = [InlineKeyboardButton(text=text, callback_data=call) for call, text in SELECT_PHOTO_KEY_CALL[lang].items()]

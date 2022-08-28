@@ -87,13 +87,18 @@ class DataBase:
     """
     Датакласс для работы с базой данных
     """
+
     @classmethod
     def user_table_create(cls) -> None:
         """
-        Классметод, создающий таблицу пользователей users, если её нет.
+        Классметод, создающий таблицы (если их нет)
+        - пользователей users,
+        - Запросов requests
+        - Отелей hotels
         """
         with sqlite3.connect('database.db') as data:
             cursor = data.cursor()
+
             cursor.execute(
                 "SELECT name FROM 'sqlite_master' "
                 "WHERE type='table' AND name='users';"
@@ -105,6 +110,42 @@ class DataBase:
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, "
                     "user_id INTEGER NOT NULL, "
                     "lang TEXT NOT NULL)"
+                )
+
+    @classmethod
+    def request_table_create(cls) -> None:
+        with sqlite3.connect('database.db') as data:
+            cursor = data.cursor()
+            cursor.execute(
+                "SELECT name FROM 'sqlite_master' "
+                "WHERE type='table' AND name='requests';"
+            )
+            exists = cursor.fetchone()
+            if not exists:
+                cursor.executescript(
+                    "CREATE TABLE 'requests' ("
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    "content TEXT NOT NULL,"
+                    "user_id INTEGER NOT NULL)"
+                )
+
+    @classmethod
+    def hotels_table_create(cls) -> None:
+        with sqlite3.connect('database.db') as data:
+            cursor = data.cursor()
+            cursor.execute(
+                "SELECT name FROM 'sqlite_master' "
+                "WHERE type='table' AND name='hotels';"
+            )
+            exists = cursor.fetchone()
+            if not exists:
+                cursor.executescript(
+                    "CREATE TABLE 'hotels' ("
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    "content TEXT NOT NULL,"
+                    "photo TEXT NOT NULL,"
+                    "requests_id INTEGER NOT NULL,"
+                    "FOREIGN KEY (requests_id) REFERENCES requests(id) ON DELETE CASCADE)"
                 )
 
     @classmethod
@@ -157,3 +198,28 @@ class DataBase:
                 "WHERE user_id = ?;", (user_id,)
             )
             return cursor.fetchone()[0]
+
+    @classmethod
+    def request_set(cls, user_id: int, content: str) -> None:
+        with sqlite3.connect('database.db') as data:
+            cursor = data.cursor()
+            cursor.execute(
+                "INSERT INTO 'requests' ("
+                "content, user_id) "
+                "VALUES (?, ?)", (content, user_id)
+            )
+
+    @classmethod
+    def hotels_set(cls, user_id: int, content: str, photo: str) -> None:
+        with sqlite3.connect('database.db') as data:
+            cursor = data.cursor()
+            cursor.execute(
+                "SELECT id FROM 'requests' "
+                "WHERE user_id = ? ORDER BY id DESC", (user_id,)
+            )
+            requests_id, *_ = cursor.fetchone()
+            cursor.execute(
+                "INSERT INTO 'hotels' ("
+                "content, photo, requests_id) "
+                "VALUES (?, ?, ?)", (content, photo, requests_id)
+            )

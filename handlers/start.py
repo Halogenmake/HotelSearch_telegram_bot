@@ -37,7 +37,7 @@ def main_menu(lang: str, user_id: int) -> None:
     bot.send_message(user_id, '\n'.join(text), reply_markup=main_menu_keys(lang))
 
 
-@bot.message_handler(commands=['start'])
+@bot.message_handler(stae=None, commands=['start'])
 def bot_start(message: Message):
     """
     Хендлер комманды /start. Если записи пользователя нет в БД, то предлагает выбрать язык интерфейса,

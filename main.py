@@ -10,4 +10,6 @@ from database.structure import DataBase
 
 if __name__ == '__main__':
     DataBase.user_table_create()
+    DataBase.request_table_create()
+    DataBase.hotels_table_create()
     bot.infinity_polling()
