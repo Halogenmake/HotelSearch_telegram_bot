@@ -1,5 +1,5 @@
 """
-Сценарий команд lowprice, hothprice.
+Сценарий команд lowprice, highprice.
 """
 
 import re
@@ -10,7 +10,6 @@ import requests
 from telebot.types import Message, CallbackQuery, InputMediaPhoto
 
 from loader import bot
-import handlers
 from config_data.API_requests import request_city_search, request_hotel_search, request_get_photo
 from database.structure import Data_request_state, DataBase, Users_State
 
@@ -21,23 +20,44 @@ from interface.messages import LOWPRICE_STAE, HIGHPRICE_STATE, SELECT_CITY, \
     SELECT_COUNT_HOTEL, CHOICE_COUNT_HOTEL, SELECT_CHECK_IN, INCORRECT_CHECK_IN_FORMAT, INCORRECT_CHECK_IN_DATA, \
     SELECT_CHECK_OUT, INCORRECT_CHECK_OUT_FORMAT, INCORRECT_CHECK_OUT_DATA, SELECT_LOAD_PHOTO, SELECT_COUNT_PHOTO, \
     CHOICE_COUNT_PHOTO, PLEASE_WHAIT, ERROR_HOTEL, DEFAULT_COMMANDS, HOTEL_TEMPLATE, NOT_FOUND, SEARCH_COMPLETE, \
-    REQUEST_CARD_TEMPLATE
+    REQUEST_CARD_TEMPLATE, SELECT_LOW_PRICE, BESTDEAL_STATE, REQUEST_CARD_TEMPLATE_BEST
 
 from keyboards.key_text import LOWPRICE_CALL, CURRENCY_KEY_CALL, COUNT_HOTEL_CALL, COUNT_PHOTO_CALL, BESTDEAL_CALL, \
     HIGHPRICE_CALL
 from keyboards.keyboards import city_corr_keys, currency_keys, hotels_count_keys, select_photo_keys, main_menu_keys
 
+from handlers.bestdeal import best_deal_select
 
-def request_card_builder(template: str, param: tuple) -> str:
+
+def request_card_builder(user_id: int) -> tuple[str, str, str]:
     """
     Вспомогательная функция формирования итоговой карточки запроса
 
-    :param template: str - Шаблон итоговой карточки запроса,
-    :param param: tuple - Параметры, пенредаваемые в шаблон запроса,
-    :return: str - Возвращает заполненную итоговую карточку запроса
+    :param user_id: id пользователя в телеграме,
+    :return: tuple - Возвращает заполненную итоговую карточку запроса, команду и язык интерфейса
     """
-    text = template.format(*param)
-    return text
+    command, lang = Users_State.state_get(user_id=user_id, key=('command', 'lang'))
+
+    if command == LOWPRICE_CALL:
+        cap = LOWPRICE_STAE[lang]
+    elif command == HIGHPRICE_CALL:
+        cap = HIGHPRICE_STATE[lang]
+    else:
+        cap = BESTDEAL_STATE[lang]
+
+    if command != BESTDEAL_CALL:
+        user_info = Users_State.state_get(user_id=user_id, key=(
+            'city', 'curr', 'check_in', 'check_out', 'hotel_count', 'photo_count'))
+
+        request_card = REQUEST_CARD_TEMPLATE[lang].format(cap, *user_info)
+
+    else:
+        user_info = Users_State.state_get(user_id=user_id, key=(
+            'city', 'curr', 'low_price', 'high_price', 'low_dist', 'high_dist', 'check_in', 'check_out',
+            'hotel_count', 'photo_count'))
+
+        request_card = REQUEST_CARD_TEMPLATE_BEST[lang].format(cap, *user_info)
+    return request_card, command, lang
 
 
 def abort_command(user_id: int, lang: str) -> None:
@@ -54,9 +74,8 @@ def lowprice_higthprice_start(user_id: int, command: str) -> None:
     Затем устанавливает стейт выбора города
     В конце записывает в стейт пользователя параметры 'lang' и 'command' (язык и выбранная команда соответственно)
 
-    :param user_id: int - id прользователя в телеграме
+    :param user_id: int - id пользователя в телеграме,
     :param command: - выбранная команда
-    :return:
     """
 
     lang = DataBase.user_get_lang(user_id=user_id)
@@ -127,8 +146,8 @@ def callback_city(call: CallbackQuery) -> None:
     Шаг 2:
     Хэндлер-обработчик инлайн-клавиатуры уточнения города.
     После выбора какого-либо города записывает название города и его id в стейт пользователя.
-    После чего выдает клавиатуру выбора валюты
-    :param call:
+    После чего выдает клавиатуру выбора валюты.
+    :param call: CallbackQuery
     :return:
     """
 
@@ -186,7 +205,7 @@ def callback_hotel_count(call: CallbackQuery) -> None:
     :param call: call.data
     """
     count_hotel = COUNT_HOTEL_CALL[call.data]
-    lang = Users_State.state_get(user_id=call.from_user.id, key='lang')
+    lang, command, curr = Users_State.state_get(user_id=call.from_user.id, key=('lang', 'command', 'curr'))
 
     bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id)
     bot.edit_message_text(
@@ -196,20 +215,26 @@ def callback_hotel_count(call: CallbackQuery) -> None:
 
     Users_State.state_record(user_id=call.from_user.id, key='hotel_count', value=count_hotel)
 
-    bot.set_state(user_id=call.from_user.id, state=Data_request_state.check_in)
-    bot.send_message(
-        chat_id=call.from_user.id, text=SELECT_CHECK_IN[lang]
-    )
+    if command != BESTDEAL_CALL:
+        bot.set_state(user_id=call.from_user.id, state=Data_request_state.check_in)
+        bot.send_message(
+            chat_id=call.from_user.id, text=SELECT_CHECK_IN[lang]
+        )
+    else:
+        bot.set_state(user_id=call.from_user.id, state=Data_request_state.low_price)
+        bot.send_message(
+            chat_id=call.from_user.id, text=SELECT_LOW_PRICE[lang].format(curr)
+        )
 
 
 @bot.message_handler(state=Data_request_state.check_in)
 def check_in_handler(message: Message) -> None:
     """
     Шаг 5:
-    Хэндлер стейта check_in. осуществляет проверку ввода пользователя по двум параметрам:
+    Хэндлер стейта check_in. Осуществляет проверку ввода пользователя по двум параметрам:
     - Формат даты
     - Дата не должна быть раньше текущей.
-    Если все впорядке - записываает данные в стейт пользователя и устанавливает стейт check_out
+    Если все в порядке - записывает данные в стейт пользователя и устанавливает стейт check_out
     :param message: Message
     """
 
@@ -242,7 +267,7 @@ def check_out_handler(message: Message) -> None:
     Хэндлер стейта check_out. Осуществляет проверку ввода пользователя по двум параметрам:
     - Формат даты
     - Дата не должна быть раньше даты заезда.
-    Если все впорядке - записываает данные в стейт пользователя и выдает клавиатуру на выбор необходимости загрузки фото отеля
+    Если все в порядке - записывает данные в стейт пользователя и выдает клавиатуру на выбор необходимости загрузки фото отеля
     :param message: Message
     """
 
@@ -277,7 +302,7 @@ def callback_select_photo(call: CallbackQuery) -> None:
     Хандоер инлайн-клавиатуры необходимости загрузки фото отеля. Реагирует только на кнопки ['yes', 'no']
     - Если выбран 'yes', записывает в стейт пользователя необходимость загрузки фото, затем выдает клавиатуру выбора количетсва фото
     - Если выбран 'no', записывает в стейт пользователя отсутствие необходимости загрузки фото, соличетсво фото ставит 0, записывает заду запрса
-    и перенаправляет в получение результата
+    и перенаправляет в получение результата.
     :param call:CallbackQuery
     """
 
@@ -291,9 +316,7 @@ def callback_select_photo(call: CallbackQuery) -> None:
     else:
         Users_State.state_record(user_id=call.from_user.id,
                                  key=('photo', 'photo_count', 'date'),
-                                 value=(
-                                     False, 0,
-                                     datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')))
+                                 value=(False, 0, datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')))
         get_result(call=call)
 
 
@@ -305,7 +328,6 @@ def callback_photo_count(call: CallbackQuery) -> None:
     После выбора количества фото - записывает в стейт пользователя необходимость загрузки фото, их количество и дату создания запроса.
     Затем перенаправляет в функцию получения результата.
     :param call: CallbackQuery
-    :return:
     """
 
     count_photo = COUNT_PHOTO_CALL[call.data]
@@ -318,40 +340,35 @@ def callback_photo_count(call: CallbackQuery) -> None:
     )
 
     Users_State.state_record(user_id=call.from_user.id, key=('photo_count', 'date'),
-                             value=(
-                                 count_photo, datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')))
+                             value=(count_photo, datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')))
 
     get_result(call=call)
 
 
 def get_result(call: CallbackQuery):
-    lang, command, city, curr, check_in, check_out, hotel_count, photo_count = \
-        Users_State.state_get(user_id=call.from_user.id, key=(
-            'lang', 'command', 'city', 'curr', 'check_in', 'check_out', 'hotel_count', 'photo_count'))
-
-    if command == LOWPRICE_CALL:
-        cap = LOWPRICE_STAE[lang]
-    else:
-        cap = HIGHPRICE_STATE[lang]
-
-    request_card = request_card_builder(template=REQUEST_CARD_TEMPLATE[lang],
-                                        param=(cap, city, curr, check_in, check_out, hotel_count, photo_count))
+    request_card, command, lang = request_card_builder(user_id=call.from_user.id)
 
     bot.send_message(chat_id=call.from_user.id,
                      text=request_card + '\n' + PLEASE_WHAIT[lang], parse_mode='html')
 
-    response = request_hotel_search(user_id=call.from_user.id)
-
+    response = request_hotel_search(user_id=call.from_user.id, command=command)
     if response.status_code == 200:
         DataBase.request_set(user_id=call.from_user.id, content=request_card)
         hotel_list = json.loads(response.text)['data']['body']['searchResults']['results']
+
         if hotel_list is False:
             bot.send_message(chat_id=call.from_user.id, text=NOT_FOUND[lang])
+            abort_command(user_id=call.from_user.id, lang=lang)
 
-        elif command != BESTDEAL_CALL:
-            show_result(user_id=call.from_user.id, hotel_list=hotel_list)
+        if command == BESTDEAL_CALL:
+            hotel_list = best_deal_select(hotel_list=hotel_list, user_id=call.from_user.id)
+
+            if hotel_list is False:
+                bot.send_message(chat_id=call.from_user.id, text=NOT_FOUND[lang])
+                abort_command(user_id=call.from_user.id, lang=lang)
+
         else:
-            print('заглушка')
+            show_result(user_id=call.from_user.id, hotel_list=hotel_list)
 
     else:
         bot.send_message(chat_id=call.from_user.id, text=ERROR_HOTEL[lang])
@@ -371,7 +388,6 @@ def show_result(user_id: int, hotel_list: dict) -> None:
                 hotel['ratePlan']['price']['current'],
                 hotel['starRating'],
                 URL_HOTEL.format(hotel['id']))
-
 
             if not f_hotel:
                 bot.send_message(chat_id=user_id, text=i_hotel, parse_mode='html')

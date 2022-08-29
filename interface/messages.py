@@ -49,6 +49,11 @@ HIGHPRICE_STATE = {
     'En': 'Select the most expensive hotels'
 }
 
+BESTDEAL_STATE = {
+    'Ru': 'Подбираем самые лучшие предложения',
+    'En': 'We select the best offers'
+}
+
 REQUEST_CARD_TEMPLATE = {
     'Ru':
         '<b>{}</b>\n'
@@ -67,6 +72,30 @@ REQUEST_CARD_TEMPLATE = {
         '<b>Number of hotels:</b> {}\n'
         '<b>Number of photos of the hotel:</b> {}\n'
 }
+
+REQUEST_CARD_TEMPLATE_BEST = {
+    'Ru':
+        '<b>{}</b>\n'
+        '<b>Город:</b> {}\n'
+        '<b>Валюта:</b> {}\n'
+        '<b>Цена:</b> от {} до {}\n'
+        '<b>Расстояние до центра:</b> от {} до {}\n'
+        '<b>Дата заезда:</b> {}\n'
+        '<b>Дата отъезда:</b> {}\n'
+        '<b>Количество отелей:</b> {}\n'
+        '<b>Количество фотографий отеля:</b> {}\n',
+    'En':
+        '<b>{}</b>\n'
+        '<b>City:</b> {}\n'
+        '<b>Currency:</b> {}\n'
+        '<b>Price:</b> from {} to {}\n'
+        '<b>Distance to the center:</b> from {} to {}\n'
+        '<b>Check_in:</b> {}\n'
+        '<b>Check_out:</b> {}\n'
+        '<b>Number of hotels:</b> {}\n'
+        '<b>Number of photos of the hotel:</b> {}\n'
+}
+
 
 SELECT_CITY = {
     'Ru': 'Введите город поиска отеля:',
@@ -141,6 +170,65 @@ INCORRECT_CHECK_OUT_FORMAT = {
 INCORRECT_CHECK_OUT_DATA = {
     'Ru': 'Дата отъезда раньше даты заезда!\nВыберите дату заезда (формат 2022-08-22):',
     'En': 'The departure date is earlier than the arrival date!\nSelect the departure date (format 2022-08-22):'
+}
+
+SELECT_LOW_PRICE = {
+    'Ru': 'Введите минимальную стоимость отеля в валюте {}:',
+    'En': 'Enter the minimum cost of the hotel in the currency {}:'
+}
+
+INCORRECT_LOW_PRICE_FORMAT = {
+    'Ru': 'Стоимость отеля должна быть целым числом!\nВведите минимальную стоимость отеля в валюте {}:',
+    'En': 'The cost of the hotel must be an integer!\nEnter the minimum cost of the hotel in the currency {}:'
+}
+
+SELECT_HIGH_PRICE = {
+    'Ru': 'Введите максимальную стоимость отеля в валюте {}:',
+    'En': 'Enter the maximum cost of the hotel in the currency {}:'
+}
+
+INCORRECT_HIGH_PRICE_FORMAT = {
+    'Ru': 'Стоимость отеля должна быть целым числом!\nВведите максимальную стоимость отеля в валюте {}:',
+    'En': 'The cost of the hotel must be an integer!\nEnter the maximum cost of the hotel in the currency {}:'
+}
+
+INCORRECT_HIGH_PRICE_DATA = {
+    'Ru': 'Максимальная стоимость отеля должна быть больше минимальной!'
+          '\nВведите максимальную стоимость отеля в валюте {}:',
+    'En': 'The maximum cost of the hotel should be more than the minimum'
+          '\nEnter the maximum cost of the hotel in the currency {}:'
+}
+
+SELECT_LOW_DIST = {
+    'Ru': 'Введите минимальное расстояние до центра (в милях). Пример: 1.4:',
+    'En': 'Enter the minimum distance to the center (in miles) Example: 1.4:'
+}
+
+INCORRECT_LOW_DIST_FORMAT = {
+    'Ru': 'Расстояние должно быть указано числом!'
+          '\nВведите минимальное расстояние до центра (в милях). Пример: 1.4:',
+    'En': 'The distance must be indicated by a number!'
+          '\nEnter the minimum distance to the center (in miles) Example: 1.4:'
+}
+
+SELECT_HIGH_DIST = {
+    'Ru': 'Введите максимальное расстояние до центра (в милях). Пример: 1.4:',
+    'En': 'Enter the maximum distance to the center (in miles) Example: 1.4:'
+}
+
+
+INCORRECT_HIGH_DIST_FORMAT = {
+    'Ru': 'Расстояние должно быть указано числом!'
+          '\nВведите максимальное расстояние до центра (в милях). Пример: 1.4:',
+    'En': 'The distance must be indicated by a number!'
+          '\nEnter the maximum distance to the center (in miles) Example: 1.4:'
+}
+
+INCORRECT_HIGH_DIST_DATA = {
+    'Ru': 'Максимальное расстояние должно быть больше минимального!'
+          '\nВведите максимальное расстояние до центра (в милях). Пример: 1.4:',
+    'En': 'The maximum distance must be greater than the minimum!'
+          '\nEnter the maximum distance to the center (in miles) Example: 1.4:'
 }
 
 SELECT_LOAD_PHOTO = {

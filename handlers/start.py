@@ -102,7 +102,7 @@ def command_forward_reply(message: Message) -> None:
     :param message: Message
     """
     clear_inline_keyboard(message)
-    if message.text == '/' + LOWPRICE_CALL or message.text == '/' + HIGHPRICE_CALL:
+    if message.text == '/' + LOWPRICE_CALL or message.text == '/' + HIGHPRICE_CALL or message.text == '/' + BESTDEAL_CALL:
         lowprice_higthprice_start(user_id=message.from_user.id, command=message.text[1:])
 
 
@@ -115,5 +115,5 @@ def command_forward_inline(call: CallbackQuery) -> None:
     """
 
     clear_inline_keyboard(call.message)
-    if call.data == LOWPRICE_CALL or call.data == HIGHPRICE_CALL:
+    if call.data == LOWPRICE_CALL or call.data == HIGHPRICE_CALL or call.data == BESTDEAL_CALL:
         lowprice_higthprice_start(user_id=call.from_user.id, command=call.data)
