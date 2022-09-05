@@ -1,9 +1,9 @@
 """
 Пакет содержит классы для работы с объектами бота:
 
-Data_request_state(StatesGroup) - датакласс для создания стейтов бота
-Users_State - датакласс для получения и записи данных в стейт
-DataBase - датакласс для работы с базой данных
+Data_request_state(StatesGroup) - дата-класс для создания стейтов бота
+Users_State - дата-класс для получения и записи данных в стейт
+DataBase - дата-класс для работы с базой данных
 
 """
 
@@ -18,11 +18,15 @@ from loader import bot
 @dataclass
 class Data_request_state(StatesGroup):
     """
-    Датакласс для создания стейтов бота
+    Дата-класс для создания стейтов бота
     """
     city: str = State()
     check_in: str = State()
     check_out: str = State()
+    low_price: str = State()
+    high_price: str = State()
+    low_dist: str = State()
+    high_dist: str = State()
 
 
 class Users_State:
@@ -43,10 +47,10 @@ class Users_State:
     @classmethod
     def state_record(cls, user_id: int, key: Union[tuple, Any], value: Union[tuple, Any]) -> None:
         """
-        Классметод записи данных в стейт.
-        Для зхаписи можно передавать как единичные значения, так и кортежи ключей и соответствующие им данные
+        Класс-метод записи данных в стейт.
+        Для записи можно передавать как единичные значения, так и кортежи ключей и соответствующие им данные
 
-        :param user_id: id прользователя в телеграме,
+        :param user_id: id пользователя в телеграме,
         :param key: ключи, по которым происходит запись,
         :param value: значения, которые должны быть записаны по переданным ключам
         """
@@ -61,12 +65,12 @@ class Users_State:
     @classmethod
     def state_get(cls, user_id: int, key: Union[tuple, str]) -> Any:
         """
-        Классметод получения данных из стейта пользователя.
+        Класс-метод получения данных из стейта пользователя.
         Для получения можно передавать как единичные значения ключей, так и кортеж ключей
 
-        :param user_id: int id прользователя в телеграме,
+        :param user_id: int id пользователя в телеграме,
         :param key: [str, tuple] ключи, по которым происходит выдача данных,
-        :return: [Any] единичное знаение или кортеж данных по переданным ключам
+        :return: [Any] единичное значение или кортеж данных по переданным ключам
         """
 
         with bot.retrieve_data(user_id=user_id) as data:
@@ -151,9 +155,9 @@ class DataBase:
     @classmethod
     def user_set(cls, user_id: int) -> bool:
         """
-        Классметод, создающий запись пользователя по user_id (id прользователя в телеграме)
-        в таблице пользоватеей users, если этой записи нет
-        :param user_id: int id прользователя в телеграме
+        Классметод, создающий запись пользователя по user_id (id пользователя в телеграме)
+        в таблице пользователей users, если этой записи нет
+        :param user_id: int id пользователя в телеграме
         :return: bool
         """
         with sqlite3.connect('database.db') as data:
@@ -175,11 +179,11 @@ class DataBase:
     @classmethod
     def user_set_lang(cls, lang: str, user_id: int) -> None:
         """
-        Записывает в таблицу пользователя по user_id (id прользователя в телеграме)
+        Записывает в таблицу пользователя по user_id (id пользователя в телеграме)
         данные о языке интерфейса
 
         :param lang: str язык пользователя,
-        :param user_id: int id прользователя в телеграме
+        :param user_id: int id пользователя в телеграме
         """
 
         with sqlite3.connect('database.db') as data:
