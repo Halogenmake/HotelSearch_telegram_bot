@@ -11,7 +11,7 @@ def main_menu_keys(lang: str) -> InlineKeyboardMarkup:
     keyboard.add(InlineKeyboardButton(text=LOWPRICE_KEY[lang], callback_data=LOWPRICE_CALL),
                  InlineKeyboardButton(text=HIGHPRICE_KEY[lang], callback_data=HIGHPRICE_CALL),
                  InlineKeyboardButton(text=BESTDEAL_KEY[lang], callback_data=BESTDEAL_CALL))
-    keyboard.add(InlineKeyboardButton(text=HISTORY_KEY[lang], callback_data=HIGHPRICE_CALL),
+    keyboard.add(InlineKeyboardButton(text=HISTORY_KEY[lang], callback_data=HISTORY_CALL),
                  InlineKeyboardButton(text=SET_LANG_KEY[lang], callback_data=SET_LANG_CALL))
     return keyboard
 

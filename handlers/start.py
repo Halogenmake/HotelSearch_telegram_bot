@@ -104,6 +104,8 @@ def command_forward_reply(message: Message) -> None:
     clear_inline_keyboard(message)
     if message.text == '/' + LOWPRICE_CALL or message.text == '/' + HIGHPRICE_CALL or message.text == '/' + BESTDEAL_CALL:
         lowprice_higthprice_start(user_id=message.from_user.id, command=message.text[1:])
+    elif message.text == '/' + HISTORY_CALL:
+        print('History')
 
 
 @bot.callback_query_handler(func=lambda call: call.data in [LOWPRICE_CALL, HIGHPRICE_CALL, BESTDEAL_CALL, HISTORY_CALL])
@@ -113,7 +115,8 @@ def command_forward_inline(call: CallbackQuery) -> None:
     Перенаправляет в соответсвующий сценарий
     :param call: CallbackQuery
     """
-
     clear_inline_keyboard(call.message)
     if call.data == LOWPRICE_CALL or call.data == HIGHPRICE_CALL or call.data == BESTDEAL_CALL:
         lowprice_higthprice_start(user_id=call.from_user.id, command=call.data)
+    elif call.data == HISTORY_CALL:
+        print('History')
