@@ -35,6 +35,8 @@ class Users_State:
     Данные, записываемые в сетйт:
     'lang': str - язык интерфейса
     'command': str - введенная команда
+    'city': str - Город поиска
+    'city_id': str - идентификатор города
     'curr': str - валюта поиска
     'hotel_count': int - количество отелей
     'check_in': str - время заезда

@@ -58,7 +58,7 @@ REQUEST_CARD_TEMPLATE = {
     'Ru':
         '<b>{}</b>\n'
         '<b>Город:</b> {}\n'
-        '<b>Валюта:</b> {}\n'
+        '<b>Валюта:</b> USD\n'
         '<b>Дата заезда:</b> {}\n'
         '<b>Дата отъезда:</b> {}\n'
         '<b>Количество отелей:</b> {}\n'
@@ -66,7 +66,7 @@ REQUEST_CARD_TEMPLATE = {
     'En':
         '<b>{}</b>\n'
         '<b>City:</b> {}\n'
-        '<b>Currency:</b> {}\n'
+        '<b>Currency:</b> USD\n'
         '<b>Check_in:</b> {}\n'
         '<b>Check_out:</b> {}\n'
         '<b>Number of hotels:</b> {}\n'
@@ -77,9 +77,9 @@ REQUEST_CARD_TEMPLATE_BEST = {
     'Ru':
         '<b>{}</b>\n'
         '<b>Город:</b> {}\n'
-        '<b>Валюта:</b> {}\n'
+        '<b>Валюта:</b> USD\n'
         '<b>Цена:</b> от {} до {}\n'
-        '<b>Расстояние до центра:</b> от {} до {}\n'
+        '<b>Расстояние до центра:</b> от {} до {} (миль)\n'
         '<b>Дата заезда:</b> {}\n'
         '<b>Дата отъезда:</b> {}\n'
         '<b>Количество отелей:</b> {}\n'
@@ -87,9 +87,9 @@ REQUEST_CARD_TEMPLATE_BEST = {
     'En':
         '<b>{}</b>\n'
         '<b>City:</b> {}\n'
-        '<b>Currency:</b> {}\n'
+        '<b>Currency:</b> USD\n'
         '<b>Price:</b> from {} to {}\n'
-        '<b>Distance to the center:</b> from {} to {}\n'
+        '<b>Distance to the center:</b> from {} to {}(mile)\n'
         '<b>Check_in:</b> {}\n'
         '<b>Check_out:</b> {}\n'
         '<b>Number of hotels:</b> {}\n'
@@ -173,8 +173,8 @@ INCORRECT_CHECK_OUT_DATA = {
 }
 
 SELECT_LOW_PRICE = {
-    'Ru': 'Введите минимальную стоимость отеля в валюте {}:',
-    'En': 'Enter the minimum cost of the hotel in the currency {}:'
+    'Ru': 'Введите минимальную стоимость отеля в USD:',
+    'En': 'Enter the minimum cost of the hotel in the currency USD:'
 }
 
 INCORRECT_LOW_PRICE_FORMAT = {
@@ -183,8 +183,8 @@ INCORRECT_LOW_PRICE_FORMAT = {
 }
 
 SELECT_HIGH_PRICE = {
-    'Ru': 'Введите максимальную стоимость отеля в валюте {}:',
-    'En': 'Enter the maximum cost of the hotel in the currency {}:'
+    'Ru': 'Введите максимальную стоимость отеля в валюте USD:',
+    'En': 'Enter the maximum cost of the hotel in the currency USD:'
 }
 
 INCORRECT_HIGH_PRICE_FORMAT = {
@@ -194,9 +194,9 @@ INCORRECT_HIGH_PRICE_FORMAT = {
 
 INCORRECT_HIGH_PRICE_DATA = {
     'Ru': 'Максимальная стоимость отеля должна быть больше минимальной!'
-          '\nВведите максимальную стоимость отеля в валюте {}:',
+          '\nВведите максимальную стоимость отеля в валюте USD:',
     'En': 'The maximum cost of the hotel should be more than the minimum'
-          '\nEnter the maximum cost of the hotel in the currency {}:'
+          '\nEnter the maximum cost of the hotel in the currency USD:'
 }
 
 SELECT_LOW_DIST = {

@@ -40,7 +40,7 @@ BESTDEAL_CALL = 'bestdeal'
 HISTORY_CALL = 'history'
 SET_LANG_CALL = 'set_lang'
 
-CURRENCY_KEY_CALL = ('RUB', 'USD', 'EUR')
+#CURRENCY_KEY_CALL = ('USD')
 
 COUNT_HOTEL_CALL = {'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7,
                     'eight': 8, 'nine': 9, 'ten': 10}

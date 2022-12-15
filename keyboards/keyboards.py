@@ -19,15 +19,15 @@ def main_menu_keys(lang: str) -> InlineKeyboardMarkup:
 def city_corr_keys(keylist: list[tuple]) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup()
     for keys in keylist:
-        keyboard.add(InlineKeyboardButton(text=keys[1], callback_data=keys[0]))
+        keyboard.add(InlineKeyboardButton(text=keys[0], callback_data=keys[1]))
     return keyboard
 
 
-def currency_keys() -> InlineKeyboardMarkup:
-    keyboard = InlineKeyboardMarkup()
-    keys = [InlineKeyboardButton(text=cur, callback_data=cur) for cur in CURRENCY_KEY_CALL]
-    keyboard.add(*keys)
-    return keyboard
+# def currency_keys() -> InlineKeyboardMarkup:
+#     keyboard = InlineKeyboardMarkup()
+#     keys = [InlineKeyboardButton(text=cur, callback_data=cur) for cur in CURRENCY_KEY_CALL]
+#     keyboard.add(*keys)
+#     return keyboard
 
 
 def hotels_count_keys(key: dict) -> InlineKeyboardMarkup:

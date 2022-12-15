@@ -19,8 +19,21 @@ HEADERS = {
     'X-RapidAPI-Key': RAPID_API_KEY
 }
 
-URL_SEARCH = 'https://hotels4.p.rapidapi.com/locations/v2/search'
-URL_PROPERTY_LIST = 'https://hotels4.p.rapidapi.com/properties/list'
-URL_PHOTO = 'https://hotels4.p.rapidapi.com/properties/get-hotel-photos'
-URL_HOTEL = 'https://www.hotels.com/ho{}'
+HEADERS_POST = {
+    "content-type": "application/json",
+    "X-RapidAPI-Key": RAPID_API_KEY,
+    "X-RapidAPI-Host": "hotels4.p.rapidapi.com"
+}
+
+
+#Выдача списка городов
+URL_SEARCH_CITY = 'https://hotels4.p.rapidapi.com/locations/v3/search'
+
+#Выдача списков отелей
+URL_HOTEL_LIST = 'https://hotels4.p.rapidapi.com/properties/v2/list'
+
+#Выдача списка фотографий
+URL_PHOTO = 'https://hotels4.p.rapidapi.com/properties/v2/detail'
+
+URL_HOTEL = 'https://www.hotels.com/h{}.Hotel-Information'
 

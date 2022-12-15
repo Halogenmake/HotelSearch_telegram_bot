@@ -10,28 +10,28 @@ from interface.messages import INCORRECT_LOW_PRICE_FORMAT, SELECT_HIGH_PRICE, IN
 
 @bot.message_handler(state=Data_request_state.low_price)
 def low_price_handler(message: Message) -> None:
-    lang, curr = Users_State.state_get(user_id=message.from_user.id, key=('lang', 'curr'))
+    lang = Users_State.state_get(user_id=message.from_user.id, key='lang')
     if message.text.isdigit():
         Users_State.state_record(user_id=message.from_user.id, key='low_price', value=int(message.text))
         bot.set_state(user_id=message.from_user.id, state=Data_request_state.high_price)
-        bot.send_message(chat_id=message.from_user.id, text=SELECT_HIGH_PRICE[lang].format(curr))
+        bot.send_message(chat_id=message.from_user.id, text=SELECT_HIGH_PRICE[lang])
     else:
-        bot.send_message(chat_id=message.from_user.id, text=INCORRECT_LOW_PRICE_FORMAT[lang].format(curr))
+        bot.send_message(chat_id=message.from_user.id, text=INCORRECT_LOW_PRICE_FORMAT[lang])
 
 
 @bot.message_handler(state=Data_request_state.high_price)
-def low_price_handler(message: Message) -> None:
-    lang, curr, low_price = Users_State.state_get(user_id=message.from_user.id, key=('lang', 'curr', 'low_price'))
+def high_price_handler(message: Message) -> None:
+    lang, low_price = Users_State.state_get(user_id=message.from_user.id, key=('lang', 'low_price'))
     if message.text.isdigit():
         high_price = int(message.text)
         if high_price < low_price:
-            bot.send_message(chat_id=message.from_user.id, text=INCORRECT_HIGH_PRICE_DATA[lang].format(curr))
+            bot.send_message(chat_id=message.from_user.id, text=INCORRECT_HIGH_PRICE_DATA[lang])
 
         Users_State.state_record(user_id=message.from_user.id, key='high_price', value=int(message.text))
         bot.set_state(user_id=message.from_user.id, state=Data_request_state.low_dist)
         bot.send_message(chat_id=message.from_user.id, text=SELECT_LOW_DIST[lang])
     else:
-        bot.send_message(chat_id=message.from_user.id, text=INCORRECT_HIGH_PRICE_FORMAT[lang].format(curr))
+        bot.send_message(chat_id=message.from_user.id, text=INCORRECT_HIGH_PRICE_FORMAT[lang])
 
 
 @bot.message_handler(state=Data_request_state.low_dist)
@@ -63,11 +63,11 @@ def high_dist_handler(message: Message) -> None:
             bot.send_message(chat_id=message.from_user.id, text=SELECT_CHECK_IN[lang])
 
 
-def best_deal_select(hotel_list: dict, user_id: int):
+def best_deal_select(hotel_list: list[dict], user_id: int):
     result = []
     low_dist, high_dist = Users_State.state_get(user_id=user_id, key=('low_dist', 'high_dist'))
     for hotel in hotel_list:
-        distance = re.sub(r'[\D+]', '', hotel['landmarks'][0]['distance'])
+        distance = hotel["destinationInfo"]["distanceFromDestination"]["value"]
         if low_dist <= int(distance) <= high_dist:
             result.append(hotel)
     return result
