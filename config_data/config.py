@@ -14,7 +14,7 @@ else:
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 RAPID_API_KEY = os.getenv('RAPID_API_KEY')
 
-HEADERS = {
+HEADERS_GET = {
     'X-RapidAPI-Host': 'hotels4.p.rapidapi.com',
     'X-RapidAPI-Key': RAPID_API_KEY
 }
@@ -26,14 +26,63 @@ HEADERS_POST = {
 }
 
 
+
 #Выдача списка городов
-URL_SEARCH_CITY = 'https://hotels4.p.rapidapi.com/locations/v3/search'
+SEARCH_CITY_ENDSWITH = 'locations/v3/search'
 
 #Выдача списков отелей
-URL_HOTEL_LIST = 'https://hotels4.p.rapidapi.com/properties/v2/list'
+HOTEL_LIST_ENDSWITH = 'properties/v2/list'
 
 #Выдача списка фотографий
-URL_PHOTO = 'https://hotels4.p.rapidapi.com/properties/v2/detail'
+PHOTO_ENDSWITH = 'properties/v2/detail'
 
 URL_HOTEL = 'https://www.hotels.com/h{}.Hotel-Information'
 
+#Параметры запроса списка городов
+CITY_SEARCH = {
+        'q': '',
+        'locale': ''
+    }
+
+#Параметры запроса списка отелей
+PAYLOAD_HOTEL_LIST = {
+        "currency": "USD",
+        "eapid": 1,
+        "locale": "en_US",
+        "siteId": 300000001,
+        "destination": {"regionId": "3023"},
+        "checkInDate": {
+            "day": 12,
+            "month": 12,
+            "year": 2022
+        },
+        "checkOutDate": {
+            "day": 13,
+            "month": 12,
+            "year": 2022
+        },
+        "rooms": [
+            {
+                "adults": 1
+            }
+        ],
+        "resultsStartingIndex": 0,
+        "resultsSize": 200,
+        "sort": "PRICE_LOW_TO_HIGH",
+        "filters": {
+            "price": {
+                "max": 15000000,
+                "min": 1
+            },
+            "availableFilter": "SHOW_AVAILABLE_ONLY"
+        }
+    }
+
+#Параметры запроса информации об отеле
+PAYLOAD_HOTEL_INFORMATION = {
+         "currency": "USD",
+         "eapid": 1,
+         "locale": "en_US",
+         "siteId": 300000001,
+         "propertyId": ''
+     }

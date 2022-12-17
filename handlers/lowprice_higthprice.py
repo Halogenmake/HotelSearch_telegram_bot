@@ -4,12 +4,16 @@
 
 import datetime
 import json
+import string
+
 from typing import Any
 
 from telebot.types import Message, CallbackQuery, InputMediaPhoto
 
 from loader import bot
-from config_data.API_requests import request_city_search, request_hotel_list, request_get_information
+from config_data.API_requests import api_request
+from config_data.config import CITY_SEARCH, SEARCH_CITY_ENDSWITH, PAYLOAD_HOTEL_LIST, HOTEL_LIST_ENDSWITH, \
+    PHOTO_ENDSWITH, PAYLOAD_HOTEL_INFORMATION
 from database.structure import Data_request_state, DataBase, Users_State
 
 from config_data.config import URL_HOTEL
@@ -21,45 +25,57 @@ from interface.messages import LOWPRICE_STAE, HIGHPRICE_STATE, SELECT_CITY, \
     CHOICE_COUNT_PHOTO, PLEASE_WHAIT, ERROR_HOTEL, DEFAULT_COMMANDS, HOTEL_TEMPLATE, NOT_FOUND, SEARCH_COMPLETE, \
     REQUEST_CARD_TEMPLATE, SELECT_LOW_PRICE, BESTDEAL_STATE, REQUEST_CARD_TEMPLATE_BEST
 
-from keyboards.key_text import LOWPRICE_CALL, COUNT_HOTEL_CALL, COUNT_PHOTO_CALL, BESTDEAL_CALL, \
-    HIGHPRICE_CALL
+from keyboards.key_text import LOWPRICE_CALL, COUNT_HOTEL_CALL, COUNT_PHOTO_CALL, BESTDEAL_CALL
+
 from keyboards.keyboards import city_corr_keys, hotels_count_keys, select_photo_keys, main_menu_keys
 
 from handlers.bestdeal import best_deal_select
 
 
-def request_card_builder(user_id: int) -> tuple[str, str, str]:
+def request_card_builder(user_id: int) -> tuple[str, str, str, dict]:
     """
     Вспомогательная функция формирования итоговой карточки запроса
 
     :param user_id: id пользователя в телеграме,
     :return: tuple - Возвращает заполненную итоговую карточку запроса, команду и язык интерфейса
     """
-    command, lang = Users_State.state_get(user_id=user_id, key=('command', 'lang'))
-
-    if command == LOWPRICE_CALL:
-        cap = LOWPRICE_STAE[lang]
-    elif command == HIGHPRICE_CALL:
-        cap = HIGHPRICE_STATE[lang]
-    else:
-        cap = BESTDEAL_STATE[lang]
+    command, lang,  city_id, locate, city, check_in, check_out, hotel_count, photo_count = Users_State.state_get(
+        user_id=user_id, key=('command', 'lang',  'city_id', 'locate', 'city', 'check_in', 'check_out', 'hotel_count', 'photo_count'))
+    param = PAYLOAD_HOTEL_LIST
 
     if command != BESTDEAL_CALL:
-        user_info = Users_State.state_get(user_id=user_id, key=(
-            'city', 'check_in', 'check_out', 'hotel_count', 'photo_count'))
+        if command == LOWPRICE_CALL:
+            cap = LOWPRICE_STAE[lang]
+        else:
+            cap = HIGHPRICE_STATE[lang]
+            param['sort'] = 'PRICE_HIGH_TO_LOW'
 
-        request_card = REQUEST_CARD_TEMPLATE[lang].format(cap, *user_info)
+        param['destination']['regionId'], param['locale'] = city_id, locate
+        request_card = REQUEST_CARD_TEMPLATE[lang].format(cap, city, check_in, check_out, hotel_count, photo_count)
 
     else:
-        user_info = Users_State.state_get(user_id=user_id, key=(
-            'city', 'low_price', 'high_price', 'low_dist', 'high_dist', 'check_in', 'check_out',
-            'hotel_count', 'photo_count'))
+        cap = BESTDEAL_STATE[lang]
+        low_price, high_price, low_dist, high_dist = Users_State.state_get(user_id=user_id, key=(
+            'low_price', 'high_price', 'low_dist', 'high_dist'))
 
-        request_card = REQUEST_CARD_TEMPLATE_BEST[lang].format(cap, *user_info)
-    return request_card, command, lang
+        param['destination']['regionId'], param['locale'], param['filters']['price']['min'], \
+        param['filters']['price']['max'] = city_id, locate, low_price, high_price
+        request_card = REQUEST_CARD_TEMPLATE_BEST[lang].format(cap, city, low_price, high_price, low_dist,
+                                                               high_dist, check_in, check_out, hotel_count, photo_count)
+
+    param['checkInDate']['year'], param['checkInDate']['month'], param['checkInDate']['day'] = map(int, check_in.split('-'))
+
+    param['checkOutDate']['year'], param['checkOutDate']['month'], param['checkOutDate']['day'] = map(int, check_out.split('-'))
+
+    return request_card, command, lang, param
 
 
 def abort_command(user_id: int, lang: str) -> None:
+    """
+    Функция прерывания сценария пользователя. Удаляет стейт пользователя и выдает главное меню бота
+    :param user_id: int - id пользователя в телеграме
+    :param lang: str - Значение языка интерфейса пользователя
+    """
     bot.delete_state(user_id=user_id)
     text = [f'/{command} - {desk}' for command, desk in DEFAULT_COMMANDS[lang].items()]
     bot.send_message(chat_id=user_id, text='\n'.join(text), reply_markup=main_menu_keys(lang))
@@ -99,6 +115,19 @@ def cancel(message: Message) -> None:
                   lang=Users_State.state_get(user_id=message.from_user.id, key='lang'))
 
 
+def get_locate(text: str) -> str:
+    """
+    Вспомогательная функция для определения параметра locate
+    :pararm text: str - строка на основе которой определяется параметр locate
+    :returt: str - возвращает значение параметра locate: 'ru_RU' или 'en_US'
+    """
+    for sym in text:
+        if sym not in string.printable:
+            return 'ru_RU'
+    else:
+        return 'en_US'
+
+
 @bot.message_handler(state=Data_request_state.city)
 def search_city_handler(message: Message) -> None:
     """
@@ -110,13 +139,16 @@ def search_city_handler(message: Message) -> None:
     """
 
     lang = Users_State.state_get(user_id=message.from_user.id, key='lang')
-    response = request_city_search(user_id=message.from_user.id, text=message.text)
+    locate = get_locate(text=message.text)
+    params = CITY_SEARCH
+    params['q'] = message.text
+    params['locate'] = locate
+    Users_State.state_record(user_id=message.from_user.id, key='locate', value=CITY_SEARCH['locale'])
+    text_response = api_request(method_endswith=SEARCH_CITY_ENDSWITH, params=CITY_SEARCH, method_type='GET')
 
-    if response.status_code != 200:
-        bot.send_message(chat_id=message.from_user.id, text=ERROR_CITY[lang])
-    else:
-        data = json.loads(response.text)['sr']
-        if data is False:
+    if text_response:
+        data = json.loads(text_response)['sr']
+        if not data:
             bot.send_message(chat_id=message.from_user.id, text=INCORRECT_CITY[lang])
         else:
             city_name_list: list[str] = []
@@ -136,6 +168,8 @@ def search_city_handler(message: Message) -> None:
             else:
                 bot.send_message(chat_id=message.from_user.id, text=CORRECT_CITY[lang],
                                  reply_markup=city_corr_keys(city_list))
+    else:
+        bot.send_message(chat_id=message.from_user.id, text=ERROR_CITY[lang])
 
 
 @bot.callback_query_handler(func=lambda call: call.data.isdigit())
@@ -164,8 +198,8 @@ def callback_city(call: CallbackQuery) -> None:
         text=CHOICE_CITY[lang].format(city_select))
 
     bot.send_message(
-             chat_id=call.from_user.id, text=SELECT_COUNT_HOTEL[lang],
-             reply_markup=hotels_count_keys(COUNT_HOTEL_CALL))
+        chat_id=call.from_user.id, text=SELECT_COUNT_HOTEL[lang],
+        reply_markup=hotels_count_keys(COUNT_HOTEL_CALL))
 
     # bot.send_message(
     #     chat_id=call.from_user.id, text=SELECT_CURRENCY[lang],
@@ -226,7 +260,6 @@ def callback_hotel_count(call: CallbackQuery) -> None:
         bot.set_state(user_id=call.from_user.id, state=Data_request_state.low_price)
         bot.send_message(
             chat_id=call.from_user.id, text=SELECT_LOW_PRICE[lang])
-
 
 
 @bot.message_handler(state=Data_request_state.check_in)
@@ -318,7 +351,9 @@ def callback_select_photo(call: CallbackQuery) -> None:
     else:
         Users_State.state_record(user_id=call.from_user.id,
                                  key=('photo', 'photo_count', 'date'),
-                                 value=(False, 0, datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')))
+                                 value=(
+                                     False, 0,
+                                     datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')))
         get_result_hotel(call=call)
 
 
@@ -350,15 +385,16 @@ def callback_photo_count(call: CallbackQuery) -> None:
 
 def get_result_hotel(call: CallbackQuery):
     Users_State.state_print(user_id=call.from_user.id)
-    request_card, command, lang = request_card_builder(user_id=call.from_user.id)
+    request_card, command, lang, params = request_card_builder(user_id=call.from_user.id)
 
     bot.send_message(chat_id=call.from_user.id,
                      text=request_card + '\n' + PLEASE_WHAIT[lang], parse_mode='html')
-    response = request_hotel_list(user_id=call.from_user.id, command=command)
 
-    if response.status_code == 200:
+    text_response = api_request(method_endswith=HOTEL_LIST_ENDSWITH, params=params, method_type='POST')
+
+    if text_response:
         try:
-            hotel_list_draft: list[dict] = json.loads(response.text)['data']['propertySearch']['properties']
+            hotel_list_draft: list[dict] = json.loads(text_response)['data']['propertySearch']['properties']
         except (KeyError, TypeError):
             bot.send_message(chat_id=call.from_user.id, text=NOT_FOUND[lang])
             abort_command(user_id=call.from_user.id, lang=lang)
@@ -372,7 +408,13 @@ def get_result_hotel(call: CallbackQuery):
                     hotel_list.append(elem)
                     hotel_count -= 1
 
-            show_result(user_id=call.from_user.id, hotel_list=hotel_list, request_card=request_card)
+            if command == BESTDEAL_CALL:
+                hotel_list = best_deal_select(hotel_list=hotel_list, user_id=call.from_user.id)
+                if hotel_list:
+                    show_result(user_id=call.from_user.id, hotel_list=hotel_list, request_card=request_card)
+                else:
+                    bot.send_message(chat_id=call.from_user.id, text=NOT_FOUND[lang])
+                    abort_command(user_id=call.from_user.id, lang=lang)
 
     else:
         bot.send_message(chat_id=call.from_user.id, text=ERROR_HOTEL[lang])
@@ -381,9 +423,6 @@ def get_result_hotel(call: CallbackQuery):
 
 def show_result(user_id: int, hotel_list: list[dict], request_card: str) -> None:
     lang, f_hotel, command = Users_State.state_get(user_id=user_id, key=('lang', 'photo', 'command'))
-    if command == BESTDEAL_CALL:
-        hotel_list = best_deal_select(hotel_list=hotel_list, user_id=user_id)
-
     DataBase.request_set(user_id=user_id, content=request_card)
     for hotel in hotel_list:
         try:
@@ -392,7 +431,7 @@ def show_result(user_id: int, hotel_list: list[dict], request_card: str) -> None
 
                 i_hotel = HOTEL_TEMPLATE[lang].format(
                     hotel["name"],
-                    f'{get_hotel_info(hotel_id=hotel_id, user_id=user_id)}',
+                    f'{get_hotel_info(hotel_id=hotel_id)}',
                     hotel["destinationInfo"]["distanceFromDestination"]["value"],
                     hotel["mapMarker"]["label"],
                     hotel["reviews"]["score"],
@@ -413,9 +452,9 @@ def show_result(user_id: int, hotel_list: list[dict], request_card: str) -> None
 
                 DataBase.hotels_set(user_id=user_id, content=i_hotel, photo='\n'.join(photo_list))
                 for photo in photo_list:
-                    media_massive.append(InputMediaPhoto(photo, caption=i_hotel if photo == photo_list[-1] else '', parse_mode='html'))
+                    media_massive.append(
+                        InputMediaPhoto(photo, caption=i_hotel if photo == photo_list[-1] else '', parse_mode='html'))
                 bot.send_media_group(chat_id=user_id, media=media_massive)
-
 
         except KeyError:
             pass
@@ -425,11 +464,14 @@ def show_result(user_id: int, hotel_list: list[dict], request_card: str) -> None
         abort_command(user_id=user_id, lang=lang)
 
 
-def get_hotel_info(hotel_id: int, user_id: int) -> str:
-    response = request_get_information(user_id=user_id, hotel_id=hotel_id)
+def get_hotel_info(hotel_id: int) -> str:
+    params = PAYLOAD_HOTEL_INFORMATION
+    params["propertyId"] = hotel_id
+    text_response = api_request(method_endswith=PHOTO_ENDSWITH, params=params, method_type='POST')
     hotel_address = ''
-    if response.status_code == 200:
-        hotel_info = json.loads(response.text)
+
+    if text_response:
+        hotel_info = json.loads(text_response)
         try:
             hotel_address = hotel_info["data"]["propertyInfo"]["summary"]["location"]["address"][
                 "addressLine"]
@@ -439,11 +481,13 @@ def get_hotel_info(hotel_id: int, user_id: int) -> str:
 
 
 def get_hotel_info_photo(hotel_id: int, user_id: int) -> tuple[Any, list[Any]]:
-    response = request_get_information(user_id=user_id, hotel_id=hotel_id)
+    params = PAYLOAD_HOTEL_INFORMATION
+    params["propertyId"] = hotel_id
+    text_response = api_request(method_endswith=PHOTO_ENDSWITH, params=params, method_type='POST')
     photo_list = []
     hotel_address = ''
-    if response.status_code == 200:
-        hotel_info = json.loads(response.text)
+    if text_response:
+        hotel_info = json.loads(text_response)
         try:
             hotel_address = hotel_info["data"]["propertyInfo"]["summary"]["location"]["address"]["addressLine"]
             hotel_photo_count = Users_State.state_get(user_id=user_id, key='photo_count')
@@ -454,7 +498,6 @@ def get_hotel_info_photo(hotel_id: int, user_id: int) -> tuple[Any, list[Any]]:
                     hotel_photo_count -= 1
                 else:
                     break
-
         except KeyError:
             pass
     return hotel_address, photo_list
