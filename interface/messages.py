@@ -283,3 +283,12 @@ HOTEL_TEMPLATE = {
         '<b>Link:</b> {}\n'
 }
 
+HISTORY_SELECT = {
+    'Ru': 'Укажите параметры отображения истории поиска',
+    'En': 'Specify the parameters for displaying the search history'
+}
+
+HISTORY_SHOW_MESSAGE = {
+    'Ru': '<b>Дата запроса:</b> {}',
+    'En': '<b>Request date:</b> {}'
+}

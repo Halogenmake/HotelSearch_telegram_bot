@@ -12,6 +12,7 @@ from database.structure import DataBase
 from keyboards.key_text import EN_CALL, RU_CALL, SET_LANG_CALL, LOWPRICE_CALL, HIGHPRICE_CALL, BESTDEAL_CALL, \
     HISTORY_CALL
 from handlers.lowprice_higthprice import lowprice_higthprice_start
+from handlers.history import history_select
 
 
 def clear_inline_keyboard(message: Message) -> None:
@@ -105,7 +106,7 @@ def command_forward_reply(message: Message) -> None:
     if message.text == '/' + LOWPRICE_CALL or message.text == '/' + HIGHPRICE_CALL or message.text == '/' + BESTDEAL_CALL:
         lowprice_higthprice_start(user_id=message.from_user.id, command=message.text[1:])
     elif message.text == '/' + HISTORY_CALL:
-        print('History')
+        history_select(user_id=message.from_user.id)
 
 
 @bot.callback_query_handler(func=lambda call: call.data in [LOWPRICE_CALL, HIGHPRICE_CALL, BESTDEAL_CALL, HISTORY_CALL])
@@ -119,4 +120,4 @@ def command_forward_inline(call: CallbackQuery) -> None:
     if call.data == LOWPRICE_CALL or call.data == HIGHPRICE_CALL or call.data == BESTDEAL_CALL:
         lowprice_higthprice_start(user_id=call.from_user.id, command=call.data)
     elif call.data == HISTORY_CALL:
-        print('History')
+        history_select(user_id=call.from_user.id)

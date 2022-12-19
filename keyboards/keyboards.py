@@ -1,3 +1,7 @@
+"""
+Формирование всех необходимых клавиатур бота
+"""
+
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from keyboards.key_text import *
 
@@ -7,6 +11,12 @@ select_lang_key.add(InlineKeyboardButton(text=ENGLISH_KEY, callback_data=EN_CALL
 
 
 def main_menu_keys(lang: str) -> InlineKeyboardMarkup:
+    """
+    Функция формирования главного меню бота
+    :param lang: str - язык интерфейса
+    :return keyboard: InlineKeyboardMarkup - возвращает собранную клавиатуру
+    """
+
     keyboard = InlineKeyboardMarkup()
     keyboard.add(InlineKeyboardButton(text=LOWPRICE_KEY[lang], callback_data=LOWPRICE_CALL),
                  InlineKeyboardButton(text=HIGHPRICE_KEY[lang], callback_data=HIGHPRICE_CALL),
@@ -17,6 +27,11 @@ def main_menu_keys(lang: str) -> InlineKeyboardMarkup:
 
 
 def city_corr_keys(keylist: list[tuple]) -> InlineKeyboardMarkup:
+    """
+    Функция формирования кнопок уточнения города
+    :param keylist: list[tuple] - список, содержащий названия городов и данные callback
+    :return keyboard: InlineKeyboardMarkup - возвращает собранную клавиатуру
+    """
     keyboard = InlineKeyboardMarkup()
     for keys in keylist:
         keyboard.add(InlineKeyboardButton(text=keys[0], callback_data=keys[1]))
@@ -31,6 +46,11 @@ def city_corr_keys(keylist: list[tuple]) -> InlineKeyboardMarkup:
 
 
 def hotels_count_keys(key: dict) -> InlineKeyboardMarkup:
+    """
+    Функция формирования кнопок для указания количества отображаемых отелей или количества загружаемых фото отеля
+    :param key: dict - список, содержащий имена кнопок и данные callback
+    :return keyboard: InlineKeyboardMarkup - возвращает собранную клавиатуру
+    """
     keyboard = InlineKeyboardMarkup(row_width=5)
     keys = [InlineKeyboardButton(text=text, callback_data=call) for call, text in key.items()]
     keyboard.add(*keys)
@@ -38,7 +58,24 @@ def hotels_count_keys(key: dict) -> InlineKeyboardMarkup:
 
 
 def select_photo_keys(lang: str) -> InlineKeyboardMarkup:
+    """
+    Функция формирования кнопок для указания необходимости загрузки фотографий отеля
+    :param lang: str - язык интерфейса
+    :return keyboard: InlineKeyboardMarkup - возвращает собранную клавиатуру
+    """
     keyboard = InlineKeyboardMarkup(row_width=5)
     keys = [InlineKeyboardButton(text=text, callback_data=call) for call, text in SELECT_PHOTO_KEY_CALL[lang].items()]
+    keyboard.add(*keys)
+    return keyboard
+
+
+def show_history_keys(lang: str) -> InlineKeyboardMarkup:
+    """
+    Функция формирования кнопок для работы с историей запросов
+    :param lang: str - язык интерфейса
+    :return keyboard: InlineKeyboardMarkup - возвращает собранную клавиатуру
+    """
+    keyboard = InlineKeyboardMarkup()
+    keys = [InlineKeyboardButton(text=text, callback_data=call) for call, text in SELECT_HISTORY_KEY_CALL[lang].items()]
     keyboard.add(*keys)
     return keyboard
