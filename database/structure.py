@@ -10,6 +10,7 @@ DataBase - дата-класс для работы с базой данных
 from dataclasses import dataclass
 import sqlite3
 from typing import Any, Union
+import datetime
 
 from telebot.handler_backends import StatesGroup, State
 from loader import bot
@@ -27,6 +28,7 @@ class Data_request_state(StatesGroup):
     high_price: str = State()
     low_dist: str = State()
     high_dist: str = State()
+    standby: str = State()
 
 
 class Users_State:
@@ -81,13 +83,6 @@ class Users_State:
             else:
                 return tuple(data[i_key] for i_key in key)
 
-    @classmethod
-    def state_print(cls, user_id: int):
-        with bot.retrieve_data(user_id=user_id) as data:
-            print()
-            for i_data in data.items():
-                print(i_data)
-
 
 class DataBase:
     """
@@ -97,10 +92,7 @@ class DataBase:
     @classmethod
     def user_table_create(cls) -> None:
         """
-        Классметод, создающий таблицы (если их нет)
-        - пользователей users,
-        - Запросов requests
-        - Отелей hotels
+        Классметод, создающий таблицу пользователей users (если её нет)
         """
         with sqlite3.connect('database.db') as data:
             cursor = data.cursor()
@@ -120,6 +112,9 @@ class DataBase:
 
     @classmethod
     def request_table_create(cls) -> None:
+        """
+        Классметод, создающий таблицу запросов requests (если её нет)
+        """
         with sqlite3.connect('database.db') as data:
             cursor = data.cursor()
             cursor.execute(
@@ -132,11 +127,15 @@ class DataBase:
                     "CREATE TABLE 'requests' ("
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, "
                     "content TEXT NOT NULL,"
-                    "user_id INTEGER NOT NULL)"
+                    "user_id INTEGER NOT NULL,"
+                    "date TEXT NOT NULL)"
                 )
 
     @classmethod
     def hotels_table_create(cls) -> None:
+        """
+        Классметод, создающий таблицу отелей hotels (если её нет)
+        """
         with sqlite3.connect('database.db') as data:
             cursor = data.cursor()
             cursor.execute(
@@ -197,6 +196,12 @@ class DataBase:
 
     @classmethod
     def user_get_lang(cls, user_id: int) -> str:
+        """
+        Классметод, возвращающий язык интерфейса для пользователя по user_id (id пользователя в телеграме)
+        :param user_id: int id пользователя в телеграме
+        :return cursor.fetchone()[0]: str
+        """
+
         with sqlite3.connect('database.db') as data:
             cursor = data.cursor()
             cursor.execute(
@@ -207,16 +212,31 @@ class DataBase:
 
     @classmethod
     def request_set(cls, user_id: int, content: str) -> None:
+        """
+        Классметод, записывающий по user_id (id пользователя в телеграме) карточку запроса в БД
+
+        :param user_id: int id пользователя в телеграме
+        :param content: str - карточка запроса
+        """
+
         with sqlite3.connect('database.db') as data:
             cursor = data.cursor()
             cursor.execute(
                 "INSERT INTO 'requests' ("
-                "content, user_id) "
-                "VALUES (?, ?)", (content, user_id)
+                "content, user_id, date) "
+                "VALUES (?, ?, ?)",
+                (content, user_id, datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S'))
             )
 
     @classmethod
     def hotels_set(cls, user_id: int, content: str, photo: str) -> None:
+        """
+        Классметод, записывающий по user_id (id пользователя в телеграме) карточку найденного отеля
+
+        :param user_id: int id пользователя в телеграме
+        :param content: str - карточка запроса
+        :param photo: str - список ссылк на фотографии отеля
+        """
         with sqlite3.connect('database.db') as data:
             cursor = data.cursor()
             cursor.execute(
@@ -229,3 +249,43 @@ class DataBase:
                 "content, photo, requests_id) "
                 "VALUES (?, ?, ?)", (content, photo, requests_id)
             )
+
+    @classmethod
+    def history_requests_get(cls, user_id: int, limit: int) -> list[Any]:
+        """
+        Классметод, возвращающий из БД по user_id (id пользователя в телеграме) его запросы
+        (или все, или в количестве limit). результат упорядочивается от ранней записи к более поздней
+
+        :param user_id: int id пользователя в телеграме
+        :param limit: int - количество выдаваемых записей запросов пользователя
+
+        :return requests - список кортежей запроса, содержащий id (id запроса) и content (карточка запроса)
+        """
+
+        with sqlite3.connect('database.db') as data:
+            cursor = data.cursor()
+            cursor.execute(
+                "SELECT id, content, date FROM requests "
+                "WHERE user_id = ? ORDER BY id DESC "
+                "LIMIT ?;", (user_id, limit,)
+            )
+            requests = cursor.fetchall()
+            return requests
+
+    @classmethod
+    def history_hotels_get(cls, request_id: int) -> list[Any]:
+        """
+        Классметод, возвращающий из БД по id запроса отели, которые были найдены
+
+        :request_id: int - id запроса в БД
+
+        :return requests - список кортежей запроса, содержащий content (карточка отеля), photo (список фотографий отеля)
+        """
+        with sqlite3.connect('database.db') as data:
+            cursor = data.cursor()
+            cursor.execute(
+                "SELECT content, photo FROM hotels "
+                "WHERE requests_id = ?;", (request_id,)
+            )
+            requests = cursor.fetchall()
+            return requests

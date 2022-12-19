@@ -6,8 +6,6 @@ import datetime
 import json
 import string
 
-from typing import Any
-
 from telebot.types import Message, CallbackQuery, InputMediaPhoto
 
 from loader import bot
@@ -32,15 +30,32 @@ from keyboards.keyboards import city_corr_keys, hotels_count_keys, select_photo_
 from handlers.bestdeal import best_deal_select
 
 
+def media_massive_maker(photo_list: list, caption: str) -> list[InputMediaPhoto]:
+    """
+    Функция формирования блока фотографий для их последоющего тображения в Talegram
+    :param photo_list: list - список url фотографий отеля
+    :param caption: str - заголовок к блоку фотографий
+
+    :return media_massive: list[InputMediaPhoto] - список фотографий отеля с заголовком в виде медиамассива
+    """
+    media_massive = []
+    for photo in photo_list:
+        media_massive.append(
+            InputMediaPhoto(photo, caption=caption if photo == photo_list[-1] else '', parse_mode='html'))
+    return media_massive
+
+
 def request_card_builder(user_id: int) -> tuple[str, str, str, dict]:
     """
-    Вспомогательная функция формирования итоговой карточки запроса
+    Вспомогательная функция формирования итоговой карточки запроса из данных, полученных из стейта пользователя
 
     :param user_id: id пользователя в телеграме,
-    :return: tuple - Возвращает заполненную итоговую карточку запроса, команду и язык интерфейса
+    :return: tuple - Возвращает заполненную итоговую карточку запроса, команду, язык интерфейса и пайлоад запроса
+     для обращения по API
     """
-    command, lang,  city_id, locate, city, check_in, check_out, hotel_count, photo_count = Users_State.state_get(
-        user_id=user_id, key=('command', 'lang',  'city_id', 'locate', 'city', 'check_in', 'check_out', 'hotel_count', 'photo_count'))
+    command, lang, city_id, locate, city, check_in, check_out, hotel_count, photo_count = Users_State.state_get(
+        user_id=user_id, key=(
+            'command', 'lang', 'city_id', 'locate', 'city', 'check_in', 'check_out', 'hotel_count', 'photo_count'))
     param = PAYLOAD_HOTEL_LIST
 
     if command != BESTDEAL_CALL:
@@ -63,11 +78,62 @@ def request_card_builder(user_id: int) -> tuple[str, str, str, dict]:
         request_card = REQUEST_CARD_TEMPLATE_BEST[lang].format(cap, city, low_price, high_price, low_dist,
                                                                high_dist, check_in, check_out, hotel_count, photo_count)
 
-    param['checkInDate']['year'], param['checkInDate']['month'], param['checkInDate']['day'] = map(int, check_in.split('-'))
+    param['checkInDate']['year'], param['checkInDate']['month'], param['checkInDate']['day'] = \
+        map(int, check_in.split('-'))
 
-    param['checkOutDate']['year'], param['checkOutDate']['month'], param['checkOutDate']['day'] = map(int, check_out.split('-'))
+    param['checkOutDate']['year'], param['checkOutDate']['month'], param['checkOutDate']['day'] = \
+        map(int, check_out.split('-'))
 
     return request_card, command, lang, param
+
+
+def answer_card_builder(hotel: dict, user_id: int, lang: str, f_hotel: bool) -> (list[str], str):
+    """
+    Вспомогательная функция формирования ответной карточки для каждого отеля. производит запрос к API для получения
+    дополнительной информации по каждому отелю на основании его id. Если необходимо загрузить фото
+    (f_hotel: bool is True), заполняет photo_list ссылками на необходимое количество фотографий.
+    В случае возникновения исключений,выдает None, None.
+    Есди исключений не возникло, выдает список фото (или пустой список) и заполненную карточку отеля.
+    :param hotel: dict - словарь, содержащий в себе первичные данные об отеле
+    :param user_id: int - id пользователя в телеграме
+    :param lang: str - язык интерфейса
+    :param f_hotel: bool - флаг необходимости загрузки фото отеля
+
+    :returt photo_list: list[str], i_hotel: str | (None, None)
+    """
+
+
+    params = PAYLOAD_HOTEL_INFORMATION
+    params["propertyId"] = hotel["id"]
+    text_response = api_request(method_endswith=PHOTO_ENDSWITH, params=params, method_type='POST')
+    photo_list = []
+    if text_response:
+        hotel_info = json.loads(text_response)
+        hotel_address = hotel_info["data"]["propertyInfo"]["summary"]["location"]["address"]["addressLine"]
+        try:
+            i_hotel = HOTEL_TEMPLATE[lang].format(
+                hotel["name"],
+                f'{hotel_address}',
+                hotel["destinationInfo"]["distanceFromDestination"]["value"],
+                hotel["mapMarker"]["label"],
+                hotel["reviews"]["score"],
+                URL_HOTEL.format(hotel['id']))
+
+            if f_hotel:
+                photo_list = []
+                hotel_photo_count = Users_State.state_get(user_id=user_id, key='photo_count')
+                hotel_info_photo = hotel_info["data"]["propertyInfo"]["propertyGallery"]["images"]
+                for photo_url in hotel_info_photo:
+                    if hotel_photo_count != 0:
+                        photo_list.append(photo_url["image"]["url"])
+                        hotel_photo_count -= 1
+                    else:
+                        break
+
+        except KeyError:
+            return None, None
+        else:
+            return photo_list, i_hotel
 
 
 def abort_command(user_id: int, lang: str) -> None:
@@ -104,8 +170,9 @@ def lowprice_higthprice_start(user_id: int, command: str) -> None:
     bot.send_message(chat_id=user_id, text=SELECT_CITY[lang])
 
 
-@bot.message_handler(state=[Data_request_state.city, Data_request_state.check_in, Data_request_state.check_out],
-                     commands=['start', 'help'])
+@bot.message_handler(state=[Data_request_state.city, Data_request_state.check_in, Data_request_state.check_out,
+                            Data_request_state.low_price, Data_request_state.high_price, Data_request_state.low_dist,
+                            Data_request_state.high_dist], commands=['start', 'help'])
 def cancel(message: Message) -> None:
     """
     Хэндлер-функция прерывания сценария по команде /start, /help
@@ -143,7 +210,7 @@ def search_city_handler(message: Message) -> None:
     params = CITY_SEARCH
     params['q'] = message.text
     params['locate'] = locate
-    Users_State.state_record(user_id=message.from_user.id, key='locate', value=CITY_SEARCH['locale'])
+    Users_State.state_record(user_id=message.from_user.id, key='locate', value=locate)
     text_response = api_request(method_endswith=SEARCH_CITY_ENDSWITH, params=CITY_SEARCH, method_type='GET')
 
     if text_response:
@@ -166,6 +233,7 @@ def search_city_handler(message: Message) -> None:
             if city_list is False:
                 bot.send_message(chat_id=message.from_user.id, text=INCORRECT_CITY[lang])
             else:
+                bot.set_state(user_id=message.from_user.id, state=Data_request_state.standby)
                 bot.send_message(chat_id=message.from_user.id, text=CORRECT_CITY[lang],
                                  reply_markup=city_corr_keys(city_list))
     else:
@@ -200,36 +268,6 @@ def callback_city(call: CallbackQuery) -> None:
     bot.send_message(
         chat_id=call.from_user.id, text=SELECT_COUNT_HOTEL[lang],
         reply_markup=hotels_count_keys(COUNT_HOTEL_CALL))
-
-    # bot.send_message(
-    #     chat_id=call.from_user.id, text=SELECT_CURRENCY[lang],
-    #     reply_markup=currency_keys()
-    # )
-
-
-# @bot.callback_query_handler(func=lambda call: call.data in CURRENCY_KEY_CALL)
-# def callback_currency(call: CallbackQuery) -> None:
-#     """
-#     Шаг 3:
-#     Хэндлер-обработчик инлайн-клавиатуры выбора валюты. Реагирует только на CURRENCY_KEY_CALL
-#     После выбора валюты записывает её в стейт пользователя.
-#     В конце выдает клавиатуру выбора количества отображаемых отелей.
-#     :param call: CallbackQuery
-#     """
-#
-#     lang = Users_State.state_get(user_id=call.from_user.id, key='lang')
-#     bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id)
-#     bot.edit_message_text(
-#         chat_id=call.message.chat.id, message_id=call.message.message_id,
-#         text=CHOICE_CURRENCY[lang].format(call.data)
-#     )
-#
-#     Users_State.state_record(user_id=call.from_user.id, key='curr', value=call.data)
-#     bot.send_message(
-#         chat_id=call.from_user.id, text=SELECT_COUNT_HOTEL[lang],
-#         reply_markup=hotels_count_keys(COUNT_HOTEL_CALL)
-#     )
-
 
 @bot.callback_query_handler(func=lambda call: call.data in COUNT_HOTEL_CALL.keys())
 def callback_hotel_count(call: CallbackQuery) -> None:
@@ -302,7 +340,8 @@ def check_out_handler(message: Message) -> None:
     Хэндлер стейта check_out. Осуществляет проверку ввода пользователя по двум параметрам:
     - Формат даты
     - Дата не должна быть раньше даты заезда.
-    Если все в порядке - записывает данные в стейт пользователя и выдает клавиатуру на выбор необходимости загрузки фото отеля
+    Если все в порядке - записывает данные в стейт пользователя и выдает клавиатуру на выбор
+    необходимости загрузки фото отеля
     :param message: Message
     """
 
@@ -323,7 +362,7 @@ def check_out_handler(message: Message) -> None:
             Users_State.state_record(user_id=message.from_user.id, key='check_out',
                                      value=check_out_date.date().strftime('%Y-%m-%d'))
 
-            bot.set_state(user_id=message.from_user.id, state=Data_request_state.check_out)
+            bot.set_state(user_id=message.from_user.id, state=Data_request_state.standby)
             bot.send_message(
                 chat_id=message.from_user.id, text=SELECT_LOAD_PHOTO[lang],
                 reply_markup=select_photo_keys(lang=lang)
@@ -335,8 +374,10 @@ def callback_select_photo(call: CallbackQuery) -> None:
     """
     Шаг 7:
     Хандоер инлайн-клавиатуры необходимости загрузки фото отеля. Реагирует только на кнопки ['yes', 'no']
-    - Если выбран 'yes', записывает в стейт пользователя необходимость загрузки фото, затем выдает клавиатуру выбора количетсва фото
-    - Если выбран 'no', записывает в стейт пользователя отсутствие необходимости загрузки фото, соличетсво фото ставит 0, записывает заду запрса
+    - Если выбран 'yes', записывает в стейт пользователя необходимость загрузки фото, затем выдает клавиатуру
+     выбора количетсва фото
+    - Если выбран 'no', записывает в стейт пользователя отсутствие необходимости загрузки фото,
+     соличетсво фото ставит 0, записывает заду запрса
     и перенаправляет в получение результата.
     :param call:CallbackQuery
     """
@@ -354,7 +395,7 @@ def callback_select_photo(call: CallbackQuery) -> None:
                                  value=(
                                      False, 0,
                                      datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')))
-        get_result_hotel(call=call)
+        get_result_hotel(user_id=call.from_user.id)
 
 
 @bot.callback_query_handler(func=lambda call: call.data in COUNT_PHOTO_CALL.keys())
@@ -362,7 +403,8 @@ def callback_photo_count(call: CallbackQuery) -> None:
     """
     Шаг 7а:
     Хандоер инлайн-клавиатуры количества фотографий. Реагирует только на COUNT_PHOTO_CALL.keys()
-    После выбора количества фото - записывает в стейт пользователя необходимость загрузки фото, их количество и дату создания запроса.
+    После выбора количества фото - записывает в стейт пользователя необходимость загрузки фото, их
+    количество и дату создания запроса.
     Затем перенаправляет в функцию получения результата.
     :param call: CallbackQuery
     """
@@ -376,31 +418,34 @@ def callback_photo_count(call: CallbackQuery) -> None:
         text=CHOICE_COUNT_PHOTO[lang].format(str(count_photo))
     )
 
-    Users_State.state_record(user_id=call.from_user.id, key=('photo_count', 'date'),
-                             value=(
-                                 count_photo, datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')))
+    Users_State.state_record(user_id=call.from_user.id, key='photo_count', value=count_photo)
 
-    get_result_hotel(call=call)
+    get_result_hotel(user_id=call.from_user.id)
 
 
-def get_result_hotel(call: CallbackQuery):
-    Users_State.state_print(user_id=call.from_user.id)
-    request_card, command, lang, params = request_card_builder(user_id=call.from_user.id)
+def get_result_hotel(user_id: int):
+    """
+    Функция получения данных по API. По итогам введенной в рамках сценария пользователем информации, формирует запрос
+    к API и обрабатывает его, формируя список отлелей hotel_list, отвечающий параметрам запроса.
+    Если список оказывается пустым,отправлет в главное меню бота, стирая стейт пользователя.
+    Если в списке есть элементы, вызывает вункцию show_result, и записывает карточку забпроса в БД
+    :param user_id: int - id пользователя в Telegram
+    """
 
-    bot.send_message(chat_id=call.from_user.id,
-                     text=request_card + '\n' + PLEASE_WHAIT[lang], parse_mode='html')
+    request_card, command, lang, params = request_card_builder(user_id=user_id)
+
+    bot.send_message(chat_id=user_id, text=request_card + '\n' + PLEASE_WHAIT[lang], parse_mode='html')
 
     text_response = api_request(method_endswith=HOTEL_LIST_ENDSWITH, params=params, method_type='POST')
-
     if text_response:
         try:
             hotel_list_draft: list[dict] = json.loads(text_response)['data']['propertySearch']['properties']
         except (KeyError, TypeError):
-            bot.send_message(chat_id=call.from_user.id, text=NOT_FOUND[lang])
-            abort_command(user_id=call.from_user.id, lang=lang)
+            bot.send_message(chat_id=user_id, text=NOT_FOUND[lang])
+            abort_command(user_id=user_id, lang=lang)
         else:
             hotel_list: list[dict] = []
-            hotel_count = Users_State.state_get(user_id=call.from_user.id, key='hotel_count')
+            hotel_count = Users_State.state_get(user_id=user_id, key='hotel_count')
             for elem in hotel_list_draft:
                 if hotel_count == 0:
                     break
@@ -409,95 +454,45 @@ def get_result_hotel(call: CallbackQuery):
                     hotel_count -= 1
 
             if command == BESTDEAL_CALL:
-                hotel_list = best_deal_select(hotel_list=hotel_list, user_id=call.from_user.id)
-                if hotel_list:
-                    show_result(user_id=call.from_user.id, hotel_list=hotel_list, request_card=request_card)
-                else:
-                    bot.send_message(chat_id=call.from_user.id, text=NOT_FOUND[lang])
-                    abort_command(user_id=call.from_user.id, lang=lang)
+                hotel_list = best_deal_select(hotel_list=hotel_list, user_id=user_id)
+
+            if hotel_list:
+                DataBase.request_set(user_id=user_id, content=request_card)
+                show_result(user_id=user_id, hotel_list=hotel_list)
+            else:
+                bot.send_message(chat_id=user_id, text=NOT_FOUND[lang])
+                abort_command(user_id=user_id, lang=lang)
 
     else:
-        bot.send_message(chat_id=call.from_user.id, text=ERROR_HOTEL[lang])
-        abort_command(user_id=call.from_user.id, lang=lang)
+        bot.send_message(chat_id=user_id, text=ERROR_HOTEL[lang])
+        abort_command(user_id=user_id, lang=lang)
 
 
-def show_result(user_id: int, hotel_list: list[dict], request_card: str) -> None:
+def show_result(user_id: int, hotel_list: list[dict]) -> None:
+    """
+    Функция отображения результата поиска отелей.
+    Затем индет по списку hotel_list: list[dict] и для кадого элемента в списке запрашивает дополнительную информацию
+    через функцию answer_card_builder, после чего отправлет пользователю сформированный ответ.
+    :param user_id: int - id пользователя в Telegram
+    :param hotel_list: list[dict] - список словарей с данными об отелях
+    """
+
     lang, f_hotel, command = Users_State.state_get(user_id=user_id, key=('lang', 'photo', 'command'))
-    DataBase.request_set(user_id=user_id, content=request_card)
+
     for hotel in hotel_list:
-        try:
-            hotel_id = hotel["id"]
-            if not f_hotel:
 
-                i_hotel = HOTEL_TEMPLATE[lang].format(
-                    hotel["name"],
-                    f'{get_hotel_info(hotel_id=hotel_id)}',
-                    hotel["destinationInfo"]["distanceFromDestination"]["value"],
-                    hotel["mapMarker"]["label"],
-                    hotel["reviews"]["score"],
-                    URL_HOTEL.format(hotel['id']))
-
+        photo_list, i_hotel = answer_card_builder(hotel=hotel, user_id=user_id, lang=lang, f_hotel=f_hotel)
+        if not photo_list and not i_hotel:
+            pass
+        else:
+            if not photo_list:
                 bot.send_message(chat_id=user_id, text=i_hotel, parse_mode='html')
             else:
-                hotel_address, photo_list = get_hotel_info_photo(hotel_id=hotel_id, user_id=user_id)
-                media_massive = []
-
-                i_hotel = HOTEL_TEMPLATE[lang].format(
-                    hotel["name"],
-                    f'{hotel_address}',
-                    hotel["destinationInfo"]["distanceFromDestination"]["value"],
-                    hotel["mapMarker"]["label"],
-                    hotel["reviews"]["score"],
-                    URL_HOTEL.format(hotel['id']))
-
-                DataBase.hotels_set(user_id=user_id, content=i_hotel, photo='\n'.join(photo_list))
-                for photo in photo_list:
-                    media_massive.append(
-                        InputMediaPhoto(photo, caption=i_hotel if photo == photo_list[-1] else '', parse_mode='html'))
+                media_massive = media_massive_maker(photo_list=photo_list, caption=i_hotel)
                 bot.send_media_group(chat_id=user_id, media=media_massive)
 
-        except KeyError:
-            pass
+            DataBase.hotels_set(user_id=user_id, content=i_hotel, photo='\n'.join(photo_list))
 
     else:
         bot.send_message(chat_id=user_id, text=SEARCH_COMPLETE[lang])
         abort_command(user_id=user_id, lang=lang)
-
-
-def get_hotel_info(hotel_id: int) -> str:
-    params = PAYLOAD_HOTEL_INFORMATION
-    params["propertyId"] = hotel_id
-    text_response = api_request(method_endswith=PHOTO_ENDSWITH, params=params, method_type='POST')
-    hotel_address = ''
-
-    if text_response:
-        hotel_info = json.loads(text_response)
-        try:
-            hotel_address = hotel_info["data"]["propertyInfo"]["summary"]["location"]["address"][
-                "addressLine"]
-        except KeyError:
-            pass
-    return hotel_address
-
-
-def get_hotel_info_photo(hotel_id: int, user_id: int) -> tuple[Any, list[Any]]:
-    params = PAYLOAD_HOTEL_INFORMATION
-    params["propertyId"] = hotel_id
-    text_response = api_request(method_endswith=PHOTO_ENDSWITH, params=params, method_type='POST')
-    photo_list = []
-    hotel_address = ''
-    if text_response:
-        hotel_info = json.loads(text_response)
-        try:
-            hotel_address = hotel_info["data"]["propertyInfo"]["summary"]["location"]["address"]["addressLine"]
-            hotel_photo_count = Users_State.state_get(user_id=user_id, key='photo_count')
-            hotel_info_photo = hotel_info["data"]["propertyInfo"]["propertyGallery"]["images"]
-            for photo_url in hotel_info_photo:
-                if hotel_photo_count != 0:
-                    photo_list.append(photo_url["image"]["url"])
-                    hotel_photo_count -= 1
-                else:
-                    break
-        except KeyError:
-            pass
-    return hotel_address, photo_list
