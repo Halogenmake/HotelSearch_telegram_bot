@@ -5,13 +5,14 @@
 from telebot.types import Message, CallbackQuery
 from telebot.apihelper import ApiTelegramException
 
-from loader import bot
+from loader import bot, logger
 from interface.messages import SELECT_LANG, DEFAULT_COMMANDS, CHOICE_LANG
 from keyboards.keyboards import select_lang_key, main_menu_keys
 from database.structure import DataBase
 from keyboards.key_text import EN_CALL, RU_CALL, SET_LANG_CALL, LOWPRICE_CALL, HIGHPRICE_CALL, BESTDEAL_CALL, \
     HISTORY_CALL
 from handlers.lowprice_higthprice import lowprice_higthprice_start
+from handlers.history import history_select
 
 
 def clear_inline_keyboard(message: Message) -> None:
@@ -27,6 +28,7 @@ def clear_inline_keyboard(message: Message) -> None:
         pass
 
 
+@logger.catch
 def main_menu(lang: str, user_id: int) -> None:
     """
     Вспомогательная функция, возвращающая главное меню бота
@@ -37,6 +39,7 @@ def main_menu(lang: str, user_id: int) -> None:
     bot.send_message(user_id, '\n'.join(text), reply_markup=main_menu_keys(lang))
 
 
+@logger.catch
 @bot.message_handler(stae=None, commands=['start'])
 def bot_start(message: Message):
     """
@@ -51,6 +54,7 @@ def bot_start(message: Message):
         bot_help(message)
 
 
+@logger.catch
 @bot.message_handler(commands=[SET_LANG_CALL])
 def select_lang_reply(message: Message) -> None:
     """
@@ -61,6 +65,7 @@ def select_lang_reply(message: Message) -> None:
     bot.send_message(message.from_user.id, SELECT_LANG, reply_markup=select_lang_key)
 
 
+@logger.catch
 @bot.message_handler(commands=['help'])
 def bot_help(message: Message) -> None:
     """
@@ -71,6 +76,7 @@ def bot_help(message: Message) -> None:
     main_menu(lang=lang, user_id=message.from_user.id)
 
 
+@logger.catch
 @bot.callback_query_handler(func=lambda call: call.data in [EN_CALL, RU_CALL, SET_LANG_CALL])
 def select_lang_inline(call: CallbackQuery) -> None:
     """
@@ -94,6 +100,7 @@ def select_lang_inline(call: CallbackQuery) -> None:
         main_menu(lang=call.data, user_id=call.from_user.id)
 
 
+@logger.catch
 @bot.message_handler(commands=[LOWPRICE_CALL, HIGHPRICE_CALL, BESTDEAL_CALL, HISTORY_CALL])
 def command_forward_reply(message: Message) -> None:
     """
@@ -105,9 +112,10 @@ def command_forward_reply(message: Message) -> None:
     if message.text == '/' + LOWPRICE_CALL or message.text == '/' + HIGHPRICE_CALL or message.text == '/' + BESTDEAL_CALL:
         lowprice_higthprice_start(user_id=message.from_user.id, command=message.text[1:])
     elif message.text == '/' + HISTORY_CALL:
-        print('History')
+        history_select(user_id=message.from_user.id)
 
 
+@logger.catch
 @bot.callback_query_handler(func=lambda call: call.data in [LOWPRICE_CALL, HIGHPRICE_CALL, BESTDEAL_CALL, HISTORY_CALL])
 def command_forward_inline(call: CallbackQuery) -> None:
     """
@@ -119,4 +127,4 @@ def command_forward_inline(call: CallbackQuery) -> None:
     if call.data == LOWPRICE_CALL or call.data == HIGHPRICE_CALL or call.data == BESTDEAL_CALL:
         lowprice_higthprice_start(user_id=call.from_user.id, command=call.data)
     elif call.data == HISTORY_CALL:
-        print('History')
+        history_select(user_id=call.from_user.id)

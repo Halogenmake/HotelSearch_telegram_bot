@@ -40,7 +40,7 @@ BESTDEAL_CALL = 'bestdeal'
 HISTORY_CALL = 'history'
 SET_LANG_CALL = 'set_lang'
 
-CURRENCY_KEY_CALL = ('RUB', 'USD', 'EUR')
+#CURRENCY_KEY_CALL = ('USD')
 
 COUNT_HOTEL_CALL = {'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7,
                     'eight': 8, 'nine': 9, 'ten': 10}
@@ -52,3 +52,8 @@ SELECT_PHOTO_KEY_CALL = {
 
 COUNT_PHOTO_CALL = {'uno': 1, 'dois': 2, 'tres': 3, 'quatro': 4, 'cinco': 5, 'seis': 6, 'sete': 7,
                     'oito': 8, 'nove': 9, 'dez': 10}
+
+SELECT_HISTORY_KEY_CALL = {
+    'Ru': {'last3': 'Последние 3 запроса', 'all': 'Вся история'},
+    'En': {'last3': 'Last 3 requests', 'all': 'Whole history'},
+}
