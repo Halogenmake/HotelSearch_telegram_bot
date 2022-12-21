@@ -2,7 +2,7 @@
 Сценарий команы history.
 """
 
-from loader import bot
+from loader import bot, logger
 from telebot.types import CallbackQuery
 
 from interface.messages import HISTORY_SELECT, HISTORY_SHOW_MESSAGE
@@ -13,6 +13,7 @@ from handlers.lowprice_higthprice import media_massive_maker, abort_command
 from database.structure import DataBase
 
 
+@logger.catch
 def history_select(user_id: int) -> None:
     """
     Функция, отправляющая сообщение с кнопками работы с историей.
@@ -22,6 +23,7 @@ def history_select(user_id: int) -> None:
     bot.send_message(chat_id=user_id, text=HISTORY_SELECT[lang], reply_markup=show_history_keys(lang))
 
 
+@logger.catch
 @bot.callback_query_handler(func=lambda call: call.data in ['last3', 'all'])
 def history_show(call: CallbackQuery) -> None:
     """

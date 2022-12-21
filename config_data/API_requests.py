@@ -3,8 +3,10 @@
 """
 import requests
 from config_data.config import HEADERS_GET, HEADERS_POST
+from loader import logger
 
 
+@logger.catch
 def api_request(method_endswith: str, params: dict, method_type: str) -> str | None:
     """
     Универсальная функция работы с запросами. В зависимости от метода запроса, вызывает одну из дочерних функций
@@ -29,6 +31,7 @@ def api_request(method_endswith: str, params: dict, method_type: str) -> str | N
         )
 
 
+@logger.catch
 def get_request(url: str, params: dict) -> str | None:
     """
     Функция запроса к API по методу GET.
@@ -54,6 +57,7 @@ def get_request(url: str, params: dict) -> str | None:
         return ''
 
 
+@logger.catch
 def post_request(url: str, params: dict) -> str | None:
     """
     Функция запроса к API по методу POST.

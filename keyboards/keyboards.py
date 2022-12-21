@@ -4,12 +4,14 @@
 
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from keyboards.key_text import *
+from loader import logger
 
 select_lang_key = InlineKeyboardMarkup()
 select_lang_key.add(InlineKeyboardButton(text=ENGLISH_KEY, callback_data=EN_CALL),
                     InlineKeyboardButton(text=RUSSIAN_KEY, callback_data=RU_CALL))
 
 
+@logger.catch
 def main_menu_keys(lang: str) -> InlineKeyboardMarkup:
     """
     Функция формирования главного меню бота
@@ -26,6 +28,7 @@ def main_menu_keys(lang: str) -> InlineKeyboardMarkup:
     return keyboard
 
 
+@logger.catch
 def city_corr_keys(keylist: list[tuple]) -> InlineKeyboardMarkup:
     """
     Функция формирования кнопок уточнения города
@@ -45,6 +48,7 @@ def city_corr_keys(keylist: list[tuple]) -> InlineKeyboardMarkup:
 #     return keyboard
 
 
+@logger.catch
 def hotels_count_keys(key: dict) -> InlineKeyboardMarkup:
     """
     Функция формирования кнопок для указания количества отображаемых отелей или количества загружаемых фото отеля
@@ -57,6 +61,7 @@ def hotels_count_keys(key: dict) -> InlineKeyboardMarkup:
     return keyboard
 
 
+@logger.catch
 def select_photo_keys(lang: str) -> InlineKeyboardMarkup:
     """
     Функция формирования кнопок для указания необходимости загрузки фотографий отеля
@@ -69,6 +74,7 @@ def select_photo_keys(lang: str) -> InlineKeyboardMarkup:
     return keyboard
 
 
+@logger.catch
 def show_history_keys(lang: str) -> InlineKeyboardMarkup:
     """
     Функция формирования кнопок для работы с историей запросов

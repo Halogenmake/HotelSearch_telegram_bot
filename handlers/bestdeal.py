@@ -1,7 +1,7 @@
 """
 Сценарий обработки команды bestdeal
 """
-from loader import bot
+from loader import bot, logger
 from database.structure import Data_request_state, Users_State
 from telebot.types import Message
 from interface.messages import INCORRECT_LOW_PRICE_FORMAT, SELECT_HIGH_PRICE, INCORRECT_HIGH_PRICE_FORMAT, \
@@ -9,6 +9,7 @@ from interface.messages import INCORRECT_LOW_PRICE_FORMAT, SELECT_HIGH_PRICE, IN
     SELECT_CHECK_IN, INCORRECT_HIGH_DIST_DATA
 
 
+@logger.catch
 @bot.message_handler(state=Data_request_state.low_price)
 def low_price_handler(message: Message) -> None:
     """
@@ -27,6 +28,7 @@ def low_price_handler(message: Message) -> None:
         bot.send_message(chat_id=message.from_user.id, text=INCORRECT_LOW_PRICE_FORMAT[lang])
 
 
+@logger.catch
 @bot.message_handler(state=Data_request_state.high_price)
 def high_price_handler(message: Message) -> None:
     """
@@ -51,6 +53,7 @@ def high_price_handler(message: Message) -> None:
         bot.send_message(chat_id=message.from_user.id, text=INCORRECT_HIGH_PRICE_FORMAT[lang])
 
 
+@logger.catch
 @bot.message_handler(state=Data_request_state.low_dist)
 def low_dist_handler(message: Message) -> None:
     """
@@ -71,6 +74,7 @@ def low_dist_handler(message: Message) -> None:
         bot.send_message(chat_id=message.from_user.id, text=SELECT_HIGH_DIST[lang])
 
 
+@logger.catch
 @bot.message_handler(state=Data_request_state.high_dist)
 def high_dist_handler(message: Message) -> None:
     """
@@ -95,6 +99,7 @@ def high_dist_handler(message: Message) -> None:
             bot.send_message(chat_id=message.from_user.id, text=SELECT_CHECK_IN[lang])
 
 
+@logger.catch
 def best_deal_select(hotel_list: list[dict], user_id: int) -> list:
     """
     Функиця отбора из списка отелей только тех, которые удовлетворяют требованиям расстояни от центра.

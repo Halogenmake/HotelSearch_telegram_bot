@@ -8,7 +8,7 @@ import string
 
 from telebot.types import Message, CallbackQuery, InputMediaPhoto
 
-from loader import bot
+from loader import bot, logger
 from config_data.API_requests import api_request
 from config_data.config import CITY_SEARCH, SEARCH_CITY_ENDSWITH, PAYLOAD_HOTEL_LIST, HOTEL_LIST_ENDSWITH, \
     PHOTO_ENDSWITH, PAYLOAD_HOTEL_INFORMATION
@@ -30,6 +30,7 @@ from keyboards.keyboards import city_corr_keys, hotels_count_keys, select_photo_
 from handlers.bestdeal import best_deal_select
 
 
+@logger.catch
 def media_massive_maker(photo_list: list, caption: str) -> list[InputMediaPhoto]:
     """
     Функция формирования блока фотографий для их последоющего тображения в Talegram
@@ -45,6 +46,7 @@ def media_massive_maker(photo_list: list, caption: str) -> list[InputMediaPhoto]
     return media_massive
 
 
+@logger.catch
 def request_card_builder(user_id: int) -> tuple[str, str, str, dict]:
     """
     Вспомогательная функция формирования итоговой карточки запроса из данных, полученных из стейта пользователя
@@ -87,6 +89,7 @@ def request_card_builder(user_id: int) -> tuple[str, str, str, dict]:
     return request_card, command, lang, param
 
 
+@logger.catch
 def answer_card_builder(hotel: dict, user_id: int, lang: str, f_hotel: bool) -> (list[str], str):
     """
     Вспомогательная функция формирования ответной карточки для каждого отеля. производит запрос к API для получения
@@ -101,7 +104,6 @@ def answer_card_builder(hotel: dict, user_id: int, lang: str, f_hotel: bool) -> 
 
     :returt photo_list: list[str], i_hotel: str | (None, None)
     """
-
 
     params = PAYLOAD_HOTEL_INFORMATION
     params["propertyId"] = hotel["id"]
@@ -136,6 +138,7 @@ def answer_card_builder(hotel: dict, user_id: int, lang: str, f_hotel: bool) -> 
             return photo_list, i_hotel
 
 
+@logger.catch
 def abort_command(user_id: int, lang: str) -> None:
     """
     Функция прерывания сценария пользователя. Удаляет стейт пользователя и выдает главное меню бота
@@ -147,6 +150,7 @@ def abort_command(user_id: int, lang: str) -> None:
     bot.send_message(chat_id=user_id, text='\n'.join(text), reply_markup=main_menu_keys(lang))
 
 
+@logger.catch
 def lowprice_higthprice_start(user_id: int, command: str) -> None:
     """
     Шаг 0:
@@ -170,6 +174,7 @@ def lowprice_higthprice_start(user_id: int, command: str) -> None:
     bot.send_message(chat_id=user_id, text=SELECT_CITY[lang])
 
 
+@logger.catch
 @bot.message_handler(state=[Data_request_state.city, Data_request_state.check_in, Data_request_state.check_out,
                             Data_request_state.low_price, Data_request_state.high_price, Data_request_state.low_dist,
                             Data_request_state.high_dist], commands=['start', 'help'])
@@ -182,6 +187,7 @@ def cancel(message: Message) -> None:
                   lang=Users_State.state_get(user_id=message.from_user.id, key='lang'))
 
 
+@logger.catch
 def get_locate(text: str) -> str:
     """
     Вспомогательная функция для определения параметра locate
@@ -195,6 +201,7 @@ def get_locate(text: str) -> str:
         return 'en_US'
 
 
+@logger.catch
 @bot.message_handler(state=Data_request_state.city)
 def search_city_handler(message: Message) -> None:
     """
@@ -209,7 +216,7 @@ def search_city_handler(message: Message) -> None:
     locate = get_locate(text=message.text)
     params = CITY_SEARCH
     params['q'] = message.text
-    params['locate'] = locate
+    params['locale'] = locate
     Users_State.state_record(user_id=message.from_user.id, key='locate', value=locate)
     text_response = api_request(method_endswith=SEARCH_CITY_ENDSWITH, params=CITY_SEARCH, method_type='GET')
 
@@ -227,10 +234,10 @@ def search_city_handler(message: Message) -> None:
                             f'{elem["regionNames"]["lastSearchName"]}, {elem["hierarchyInfo"]["country"]["name"]}')
                         city_id_list.append(elem['gaiaId'])
                 except KeyError:
-                    pass
+                    print('исключение')
 
             city_list = list(zip(city_name_list, city_id_list))
-            if city_list is False:
+            if not city_list:
                 bot.send_message(chat_id=message.from_user.id, text=INCORRECT_CITY[lang])
             else:
                 bot.set_state(user_id=message.from_user.id, state=Data_request_state.standby)
@@ -240,6 +247,7 @@ def search_city_handler(message: Message) -> None:
         bot.send_message(chat_id=message.from_user.id, text=ERROR_CITY[lang])
 
 
+@logger.catch
 @bot.callback_query_handler(func=lambda call: call.data.isdigit())
 def callback_city(call: CallbackQuery) -> None:
     """
@@ -269,6 +277,8 @@ def callback_city(call: CallbackQuery) -> None:
         chat_id=call.from_user.id, text=SELECT_COUNT_HOTEL[lang],
         reply_markup=hotels_count_keys(COUNT_HOTEL_CALL))
 
+
+@logger.catch
 @bot.callback_query_handler(func=lambda call: call.data in COUNT_HOTEL_CALL.keys())
 def callback_hotel_count(call: CallbackQuery) -> None:
     """
@@ -300,6 +310,7 @@ def callback_hotel_count(call: CallbackQuery) -> None:
             chat_id=call.from_user.id, text=SELECT_LOW_PRICE[lang])
 
 
+@logger.catch
 @bot.message_handler(state=Data_request_state.check_in)
 def check_in_handler(message: Message) -> None:
     """
@@ -333,6 +344,7 @@ def check_in_handler(message: Message) -> None:
             )
 
 
+@logger.catch
 @bot.message_handler(state=Data_request_state.check_out)
 def check_out_handler(message: Message) -> None:
     """
@@ -369,6 +381,7 @@ def check_out_handler(message: Message) -> None:
             )
 
 
+@logger.catch
 @bot.callback_query_handler(func=lambda call: call.data in ['yes', 'no'])
 def callback_select_photo(call: CallbackQuery) -> None:
     """
@@ -398,6 +411,7 @@ def callback_select_photo(call: CallbackQuery) -> None:
         get_result_hotel(user_id=call.from_user.id)
 
 
+@logger.catch
 @bot.callback_query_handler(func=lambda call: call.data in COUNT_PHOTO_CALL.keys())
 def callback_photo_count(call: CallbackQuery) -> None:
     """
@@ -423,6 +437,7 @@ def callback_photo_count(call: CallbackQuery) -> None:
     get_result_hotel(user_id=call.from_user.id)
 
 
+@logger.catch
 def get_result_hotel(user_id: int):
     """
     Функция получения данных по API. По итогам введенной в рамках сценария пользователем информации, формирует запрос
@@ -468,6 +483,7 @@ def get_result_hotel(user_id: int):
         abort_command(user_id=user_id, lang=lang)
 
 
+@logger.catch
 def show_result(user_id: int, hotel_list: list[dict]) -> None:
     """
     Функция отображения результата поиска отелей.
